@@ -3,10 +3,10 @@ spring:
   application:
     name: obus-partner-api
   datasource:
-    url: jdbc:mysql://localhost:3306/obus_partner_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC
+    url: jdbc:mysql://localhost:3306/obus_partner_db_test?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC
     driver-class-name: com.mysql.cj.jdbc.Driver
     username: root
-    password: password
+    password: 
   jpa:
     database-platform: org.hibernate.dialect.MySQLDialect
     hibernate:
@@ -20,10 +20,23 @@ spring:
       allowed-origins: "*"
       allowed-methods: GET,POST,PUT,DELETE,OPTIONS
       allowed-headers: "*"
+  devtools:
+    restart:
+      enabled: true
+      additional-paths: src/main/java
+      exclude: static/**,public/**,resources/**
+    livereload:
+      enabled: true
+      port: 35729
+    remote:
+      restart:
+        enabled: false
 
 # Server Configuration
 server:
   port: 8080
+  servlet:
+    context-path: /api
 
 # Management/Actuator Configuration
 management:
@@ -56,5 +69,14 @@ springdoc:
 
 # JWT Configuration
 jwt:
-  secret: mySecretKey123456789012345678901234567890123456789012345678901234567890
-  expiration: 86400 # 24 hours in seconds
+  secret: a8f5f167f44f4964e6c998dee827110c8f5f167f44f4964e6c998dee827110c8f5f167f44f4964e6c998dee827110c8f5f167f44f4964e6c998dee827110c
+  expiration: 36000 # 10 hours in seconds
+  refresh-expiration: 604800 # 7 days in seconds
+
+# Root Admin Configuration
+root-admin:
+  username: rootadmin
+  password: Root@2024!Sec
+  email: rootadmin@obus.com
+  firstName: Root
+  lastName: Administrator
