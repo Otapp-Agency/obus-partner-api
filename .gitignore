@@ -194,4 +194,3 @@ config/application-*.yml
 config/application-*.properties
 !config/application.yml
 !config/application.properties
-application.yml
