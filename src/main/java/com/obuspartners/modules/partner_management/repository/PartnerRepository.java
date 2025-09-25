@@ -32,12 +32,12 @@ public interface PartnerRepository extends JpaRepository<Partner, Long> {
     Optional<Partner> findByUid(String uid);
 
     /**
-     * Find partner by unique partner code
+     * Find partner by unique code
      * 
-     * @param partnerCode the partner code
+     * @param code the partner code
      * @return Optional containing the partner if found
      */
-    Optional<Partner> findByPartnerCode(String partnerCode);
+    Optional<Partner> findByCode(String code);
 
     /**
      * Find partner by email address
@@ -80,12 +80,12 @@ public interface PartnerRepository extends JpaRepository<Partner, Long> {
     boolean existsByUid(String uid);
 
     /**
-     * Check if partner code exists
+     * Check if code exists
      * 
-     * @param partnerCode the partner code
-     * @return true if partner code exists, false otherwise
+     * @param code the partner code
+     * @return true if code exists, false otherwise
      */
-    boolean existsByPartnerCode(String partnerCode);
+    boolean existsByCode(String code);
 
     /**
      * Check if email exists

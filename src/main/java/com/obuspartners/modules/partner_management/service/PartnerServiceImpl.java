@@ -50,12 +50,9 @@ public class PartnerServiceImpl implements PartnerService {
         // Validate uniqueness of critical fields
         validateUniqueFieldsForCreation(createRequest);
         
-        // Generate unique partner code
-        String partnerCode = generateUniquePartnerCode();
-        
         // Create partner entity
         Partner partner = new Partner();
-        partner.setPartnerCode(partnerCode);
+        partner.setCode(createRequest.getCode());
         partner.setBusinessName(createRequest.getBusinessName());
         partner.setLegalName(createRequest.getLegalName());
         partner.setEmail(createRequest.getEmail());
@@ -86,7 +83,7 @@ public class PartnerServiceImpl implements PartnerService {
 
         // Save partner
         Partner savedPartner = partnerRepository.save(partner);
-        log.info("Successfully created partner with ID: {} and code: {}", savedPartner.getId(), savedPartner.getPartnerCode());
+        log.info("Successfully created partner with ID: {} and code: {}", savedPartner.getId(), savedPartner.getCode());
         
         return convertToResponseDto(savedPartner);
     }
@@ -158,7 +155,7 @@ public class PartnerServiceImpl implements PartnerService {
     @Override
     public Optional<PartnerResponseDto> getPartnerByCode(String partnerCode) {
         log.debug("Retrieving partner by code: {}", partnerCode);
-        return partnerRepository.findByPartnerCode(partnerCode)
+        return partnerRepository.findByCode(partnerCode)
                 .map(this::convertToResponseDto);
     }
 
@@ -410,6 +407,16 @@ public class PartnerServiceImpl implements PartnerService {
     }
 
     @Override
+    public List<PartnerSummaryDto> getAllPartnersForAssignment() {
+        log.debug("Retrieving all active partners for assignment (non-paginated)");
+        return partnerRepository.findAll()
+                .stream()
+                .filter(partner -> partner.getIsActive() && partner.getStatus() == PartnerStatus.ACTIVE)
+                .map(this::convertToSummaryDto)
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    @Override
     public Page<PartnerSummaryDto> getPartnersByStatus(PartnerStatus status, Pageable pageable) {
         log.debug("Retrieving partners by status: {} with pagination: {}", status, pageable);
         return partnerRepository.findByStatus(status, pageable)
@@ -503,9 +510,9 @@ public class PartnerServiceImpl implements PartnerService {
     }
 
     @Override
-    public boolean existsByPartnerCode(String partnerCode) {
+    public boolean existsByCode(String partnerCode) {
         log.debug("Checking if partner code exists: {}", partnerCode);
-        return partnerRepository.existsByPartnerCode(partnerCode);
+        return partnerRepository.existsByCode(partnerCode);
     }
 
     @Override
@@ -534,7 +541,7 @@ public class PartnerServiceImpl implements PartnerService {
 
     @Override
     public boolean validatePartner(Partner partner) {
-        log.debug("Validating partner: {}", partner.getPartnerCode());
+        log.debug("Validating partner: {}", partner.getCode());
         
         // Basic validation checks
         if (!StringUtils.hasText(partner.getBusinessName())) {
@@ -564,7 +571,7 @@ public class PartnerServiceImpl implements PartnerService {
             return false;
         }
         
-        log.debug("Partner validation successful: {}", partner.getPartnerCode());
+        log.debug("Partner validation successful: {}", partner.getCode());
         return true;
     }
 
@@ -575,7 +582,7 @@ public class PartnerServiceImpl implements PartnerService {
         String uniqueCode = baseCode;
         
         int counter = 1;
-        while (partnerRepository.existsByPartnerCode(uniqueCode)) {
+        while (partnerRepository.existsByCode(uniqueCode)) {
             uniqueCode = baseCode + "_" + counter;
             counter++;
         }
@@ -636,49 +643,6 @@ public class PartnerServiceImpl implements PartnerService {
                 .orElseThrow(() -> new ResourceNotFoundException("Partner not found with ID: " + partnerId));
     }
 
-    private void validateUniqueFieldsForCreation(CreatePartnerRequestDto createRequest) {
-        if (partnerRepository.existsByEmail(createRequest.getEmail())) {
-            throw new DuplicateResourceException("Email already exists: " + createRequest.getEmail());
-        }
-        
-        if (partnerRepository.existsByPhoneNumber(createRequest.getPhoneNumber())) {
-            throw new DuplicateResourceException("Phone number already exists: " + createRequest.getPhoneNumber());
-        }
-        
-        if (partnerRepository.existsByBusinessRegistrationNumber(createRequest.getBusinessRegistrationNumber())) {
-            throw new DuplicateResourceException("Business registration number already exists: " + createRequest.getBusinessRegistrationNumber());
-        }
-        
-        if (partnerRepository.existsByTaxIdentificationNumber(createRequest.getTaxIdentificationNumber())) {
-            throw new DuplicateResourceException("Tax identification number already exists: " + createRequest.getTaxIdentificationNumber());
-        }
-    }
-
-    private void validateUniqueFieldsForUpdate(Partner existingPartner, UpdatePartnerRequestDto updateRequest) {
-        if (StringUtils.hasText(updateRequest.getEmail()) && 
-            !updateRequest.getEmail().equals(existingPartner.getEmail()) &&
-            partnerRepository.existsByEmail(updateRequest.getEmail())) {
-            throw new DuplicateResourceException("Email already exists: " + updateRequest.getEmail());
-        }
-        
-        if (StringUtils.hasText(updateRequest.getPhoneNumber()) && 
-            !updateRequest.getPhoneNumber().equals(existingPartner.getPhoneNumber()) &&
-            partnerRepository.existsByPhoneNumber(updateRequest.getPhoneNumber())) {
-            throw new DuplicateResourceException("Phone number already exists: " + updateRequest.getPhoneNumber());
-        }
-        
-        if (StringUtils.hasText(updateRequest.getBusinessRegistrationNumber()) && 
-            !updateRequest.getBusinessRegistrationNumber().equals(existingPartner.getBusinessRegistrationNumber()) &&
-            partnerRepository.existsByBusinessRegistrationNumber(updateRequest.getBusinessRegistrationNumber())) {
-            throw new DuplicateResourceException("Business registration number already exists: " + updateRequest.getBusinessRegistrationNumber());
-        }
-        
-        if (StringUtils.hasText(updateRequest.getTaxIdentificationNumber()) && 
-            !updateRequest.getTaxIdentificationNumber().equals(existingPartner.getTaxIdentificationNumber()) &&
-            partnerRepository.existsByTaxIdentificationNumber(updateRequest.getTaxIdentificationNumber())) {
-            throw new DuplicateResourceException("Tax identification number already exists: " + updateRequest.getTaxIdentificationNumber());
-        }
-    }
 
     private void updatePartnerFields(Partner partner, UpdatePartnerRequestDto updateRequest) {
         if (StringUtils.hasText(updateRequest.getBusinessName())) {
@@ -774,7 +738,7 @@ public class PartnerServiceImpl implements PartnerService {
         return PartnerResponseDto.builder()
                 .id(partner.getId())
                 .uid(partner.getUid())
-                .partnerCode(partner.getPartnerCode())
+                .code(partner.getCode())
                 .businessName(partner.getBusinessName())
                 .legalName(partner.getLegalName())
                 .email(partner.getEmail())
@@ -810,7 +774,7 @@ public class PartnerServiceImpl implements PartnerService {
         return PartnerSummaryDto.builder()
                 .id(partner.getId())
                 .uid(partner.getUid())
-                .partnerCode(partner.getPartnerCode())
+                .code(partner.getCode())
                 .businessName(partner.getBusinessName())
                 .legalName(partner.getLegalName())
                 .email(partner.getEmail())
@@ -842,18 +806,6 @@ public class PartnerServiceImpl implements PartnerService {
         return PageRequest.of(searchRequest.getPage(), searchRequest.getSize(), sort);
     }
 
-    private String generateUniquePartnerCode() {
-        String baseCode = "PTR" + System.currentTimeMillis();
-        String uniqueCode = baseCode;
-        
-        int counter = 1;
-        while (partnerRepository.existsByPartnerCode(uniqueCode)) {
-            uniqueCode = baseCode + "_" + counter;
-            counter++;
-        }
-        
-        return uniqueCode;
-    }
 
     private boolean isValidEmail(String email) {
         return email != null && email.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
@@ -883,7 +835,7 @@ public class PartnerServiceImpl implements PartnerService {
                 partner.setUpdatedBy(currentUser);
                 partnerRepository.save(partner);
                 
-                log.debug("Updated partner {} status to {}", partner.getPartnerCode(), status);
+                log.debug("Updated partner {} status to {}", partner.getCode(), status);
             } catch (Exception e) {
                 log.error("Failed to update partner {} status: {}", partnerId, e.getMessage());
                 // Continue with other partners even if one fails
@@ -913,7 +865,7 @@ public class PartnerServiceImpl implements PartnerService {
                 partner.setUpdatedBy(currentUser);
                 partnerRepository.save(partner);
                 
-                log.debug("Updated partner {} tier to {}", partner.getPartnerCode(), tier);
+                log.debug("Updated partner {} tier to {}", partner.getCode(), tier);
             } catch (Exception e) {
                 log.error("Failed to update partner {} tier: {}", partnerId, e.getMessage());
                 // Continue with other partners even if one fails
@@ -938,5 +890,68 @@ public class PartnerServiceImpl implements PartnerService {
         String username = authentication.getName();
         return userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + username));
+    }
+
+    /**
+     * Validate uniqueness of critical fields for partner creation
+     */
+    private void validateUniqueFieldsForCreation(CreatePartnerRequestDto createRequest) {
+        // Check code uniqueness
+        if (partnerRepository.existsByCode(createRequest.getCode())) {
+            throw new DuplicateResourceException("Code already exists: " + createRequest.getCode());
+        }
+        
+        // Check email uniqueness
+        if (partnerRepository.existsByEmail(createRequest.getEmail())) {
+            throw new DuplicateResourceException("Email already exists: " + createRequest.getEmail());
+        }
+        
+        // Check phone number uniqueness
+        if (partnerRepository.existsByPhoneNumber(createRequest.getPhoneNumber())) {
+            throw new DuplicateResourceException("Phone number already exists: " + createRequest.getPhoneNumber());
+        }
+        
+        // Check business registration number uniqueness
+        if (partnerRepository.existsByBusinessRegistrationNumber(createRequest.getBusinessRegistrationNumber())) {
+            throw new DuplicateResourceException("Business registration number already exists: " + createRequest.getBusinessRegistrationNumber());
+        }
+        
+        // Check tax identification number uniqueness
+        if (partnerRepository.existsByTaxIdentificationNumber(createRequest.getTaxIdentificationNumber())) {
+            throw new DuplicateResourceException("Tax identification number already exists: " + createRequest.getTaxIdentificationNumber());
+        }
+    }
+
+    /**
+     * Validate uniqueness of critical fields for partner update
+     */
+    private void validateUniqueFieldsForUpdate(Partner partner, UpdatePartnerRequestDto updateRequest) {
+        // Check email uniqueness (if being updated)
+        if (updateRequest.getEmail() != null && 
+            !updateRequest.getEmail().equals(partner.getEmail()) &&
+            partnerRepository.existsByEmail(updateRequest.getEmail())) {
+            throw new DuplicateResourceException("Email already exists: " + updateRequest.getEmail());
+        }
+        
+        // Check phone number uniqueness (if being updated)
+        if (updateRequest.getPhoneNumber() != null && 
+            !updateRequest.getPhoneNumber().equals(partner.getPhoneNumber()) &&
+            partnerRepository.existsByPhoneNumber(updateRequest.getPhoneNumber())) {
+            throw new DuplicateResourceException("Phone number already exists: " + updateRequest.getPhoneNumber());
+        }
+        
+        // Check business registration number uniqueness (if being updated)
+        if (updateRequest.getBusinessRegistrationNumber() != null && 
+            !updateRequest.getBusinessRegistrationNumber().equals(partner.getBusinessRegistrationNumber()) &&
+            partnerRepository.existsByBusinessRegistrationNumber(updateRequest.getBusinessRegistrationNumber())) {
+            throw new DuplicateResourceException("Business registration number already exists: " + updateRequest.getBusinessRegistrationNumber());
+        }
+        
+        // Check tax identification number uniqueness (if being updated)
+        if (updateRequest.getTaxIdentificationNumber() != null && 
+            !updateRequest.getTaxIdentificationNumber().equals(partner.getTaxIdentificationNumber()) &&
+            partnerRepository.existsByTaxIdentificationNumber(updateRequest.getTaxIdentificationNumber())) {
+            throw new DuplicateResourceException("Tax identification number already exists: " + updateRequest.getTaxIdentificationNumber());
+        }
     }
 }

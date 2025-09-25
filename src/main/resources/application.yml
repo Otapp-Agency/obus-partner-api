@@ -31,6 +31,19 @@ spring:
     remote:
       restart:
         enabled: false
+  # Mail Configuration
+  mail:
+    host: smtp-relay.brevo.com
+    port: 587
+    username: 8af8b0001@smtp-brevo.com
+    password: xsmtpsib-2ca2d952e4d6ec5bdf4f184270c3b9ae8cb36ec847bfd3508e60ce47e9f31bde-OymjT4cSX0fIFJMs
+    from: no-reply@otapp.live
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
 # Server Configuration
 server:
@@ -78,5 +91,6 @@ root-admin:
   username: rootadmin
   password: Root@2024!Sec
   email: rootadmin@obus.com
+  displayName: Root Administrator
   firstName: Root
   lastName: Administrator

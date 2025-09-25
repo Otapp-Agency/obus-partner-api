@@ -25,7 +25,7 @@ public class PartnerSummaryDto {
 
     private Long id;
     private String uid;
-    private String partnerCode;
+    private String code;
     private String businessName;
     private String legalName;
     private String email;

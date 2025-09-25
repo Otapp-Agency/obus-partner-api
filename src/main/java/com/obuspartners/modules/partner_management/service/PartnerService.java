@@ -9,6 +9,7 @@ import com.obuspartners.modules.partner_management.domain.enums.PartnerStatus;
 import com.obuspartners.modules.partner_management.domain.enums.PartnerTier;
 import com.obuspartners.modules.partner_management.domain.enums.PartnerType;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -221,6 +222,13 @@ public interface PartnerService {
     Page<PartnerSummaryDto> getAllPartners(Pageable pageable);
 
     /**
+     * Get all partners without pagination (for assignment purposes)
+     * 
+     * @return List of all partner summaries
+     */
+    List<PartnerSummaryDto> getAllPartnersForAssignment();
+
+    /**
      * Get partners by status
      * 
      * @param status the partner status
@@ -330,7 +338,7 @@ public interface PartnerService {
      * @param partnerCode the partner code
      * @return true if partner code exists, false otherwise
      */
-    boolean existsByPartnerCode(String partnerCode);
+    boolean existsByCode(String code);
 
     /**
      * Check if email exists

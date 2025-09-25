@@ -43,8 +43,8 @@ public class Partner extends BaseEntity {
 
     @NotBlank
     @Size(max = 50)
-    @Column(name = "partner_code", unique = true, nullable = false)
-    private String partnerCode;
+    @Column(name = "code", unique = true, nullable = false)
+    private String code;
 
     @NotBlank
     @Size(max = 200)

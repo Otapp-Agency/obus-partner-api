@@ -224,9 +224,9 @@ public class BusCoreSystemServiceImpl implements BusCoreSystemService {
         dto.setCreatedAt(system.getCreatedAt());
         dto.setUpdatedAt(system.getUpdatedAt());
         dto.setCreatedBy(system.getCreatedBy() != null ? 
-            system.getCreatedBy().getFirstName() + " " + system.getCreatedBy().getLastName() : null);
+            system.getCreatedBy().getDisplayName() : null);
         dto.setUpdatedBy(system.getUpdatedBy() != null ? 
-            system.getUpdatedBy().getFirstName() + " " + system.getUpdatedBy().getLastName() : null);
+            system.getUpdatedBy().getDisplayName() : null);
         
         return dto;
     }

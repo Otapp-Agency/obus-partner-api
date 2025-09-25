@@ -1,39 +1,18 @@
 package com.obuspartners.modules.user_and_role_management.service;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-
 import com.obuspartners.modules.user_and_role_management.domain.entity.User;
-import com.obuspartners.modules.user_and_role_management.repository.UserRepository;
+import org.springframework.security.core.userdetails.UserDetailsService;
 
 import java.util.List;
 import java.util.Optional;
 
 /**
- * User service interface and implementation
+ * User service interface
  * 
  * @author OBUS Team
  * @version 1.0.0
  */
-@Service
-public class UserService implements UserDetailsService {
-
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-
-    @Override
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username));
-        return user;
-    }
+public interface UserService extends UserDetailsService {
 
     /**
      * Save a new user
@@ -41,10 +20,15 @@ public class UserService implements UserDetailsService {
      * @param user the user to save
      * @return the saved user
      */
-    public User save(User user) {
-        user.setPassword(passwordEncoder.encode(user.getPassword()));
-        return userRepository.save(user);
-    }
+    User save(User user);
+
+    /**
+     * Update an existing user
+     * 
+     * @param user the user to update
+     * @return the updated user
+     */
+    User update(User user);
 
     /**
      * Find user by username
@@ -52,9 +36,7 @@ public class UserService implements UserDetailsService {
      * @param username the username
      * @return Optional containing the user if found
      */
-    public Optional<User> findByUsername(String username) {
-        return userRepository.findByUsername(username);
-    }
+    Optional<User> findByUsername(String username);
 
     /**
      * Find user by email
@@ -62,18 +44,14 @@ public class UserService implements UserDetailsService {
      * @param email the email
      * @return Optional containing the user if found
      */
-    public Optional<User> findByEmail(String email) {
-        return userRepository.findByEmail(email);
-    }
+    Optional<User> findByEmail(String email);
 
     /**
      * Find all users
      * 
      * @return list of all users
      */
-    public List<User> findAll() {
-        return userRepository.findAll();
-    }
+    List<User> findAll();
 
     /**
      * Find user by ID
@@ -81,9 +59,7 @@ public class UserService implements UserDetailsService {
      * @param id the user ID
      * @return Optional containing the user if found
      */
-    public Optional<User> findById(Long id) {
-        return userRepository.findById(id);
-    }
+    Optional<User> findById(Long id);
 
     /**
      * Check if username exists
@@ -91,9 +67,7 @@ public class UserService implements UserDetailsService {
      * @param username the username
      * @return true if username exists, false otherwise
      */
-    public boolean existsByUsername(String username) {
-        return userRepository.existsByUsername(username);
-    }
+    boolean existsByUsername(String username);
 
     /**
      * Check if email exists
@@ -101,16 +75,65 @@ public class UserService implements UserDetailsService {
      * @param email the email
      * @return true if email exists, false otherwise
      */
-    public boolean existsByEmail(String email) {
-        return userRepository.existsByEmail(email);
-    }
+    boolean existsByEmail(String email);
 
     /**
      * Delete user by ID
      * 
      * @param id the user ID
      */
-    public void deleteById(Long id) {
-        userRepository.deleteById(id);
-    }
+    void deleteById(Long id);
+
+    /**
+     * Enable or disable user account
+     * 
+     * @param id the user ID
+     * @param enabled true to enable, false to disable
+     * @return the updated user
+     */
+    User setUserEnabled(Long id, boolean enabled);
+
+    /**
+     * Add role to user
+     * 
+     * @param userId the user ID
+     * @param roleId the role ID
+     * @return the updated user
+     */
+    User addRoleToUser(Long userId, Long roleId);
+
+    /**
+     * Remove role from user
+     * 
+     * @param userId the user ID
+     * @param roleId the role ID
+     * @return the updated user
+     */
+    User removeRoleFromUser(Long userId, Long roleId);
+
+    /**
+     * Set password change requirement for user
+     * 
+     * @param userId the user ID
+     * @param requirePasswordChange true to require password change, false otherwise
+     * @return the updated user
+     */
+    User setPasswordChangeRequired(Long userId, boolean requirePasswordChange);
+
+    /**
+     * Change user password
+     * 
+     * @param userId the user ID
+     * @param newPassword the new password
+     * @return the updated user
+     */
+    User changePassword(Long userId, String newPassword);
+
+    /**
+     * Check if user requires password change
+     * 
+     * @param userId the user ID
+     * @return true if password change is required, false otherwise
+     */
+    boolean isPasswordChangeRequired(Long userId);
 }

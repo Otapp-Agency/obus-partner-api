@@ -25,23 +25,18 @@ public class RegisterRequestDto {
     @Size(min = 6, max = 100, message = "Password must be between 6 and 100 characters")
     private String password;
 
-    @NotBlank(message = "First name is required")
-    @Size(max = 50, message = "First name must not exceed 50 characters")
-    private String firstName;
-
-    @NotBlank(message = "Last name is required")
-    @Size(max = 50, message = "Last name must not exceed 50 characters")
-    private String lastName;
+    @NotBlank(message = "Display name is required")
+    @Size(max = 100, message = "Display name must not exceed 100 characters")
+    private String displayName;
 
     // Constructors
     public RegisterRequestDto() {}
 
-    public RegisterRequestDto(String username, String email, String password, String firstName, String lastName) {
+    public RegisterRequestDto(String username, String email, String password, String displayName) {
         this.username = username;
         this.email = email;
         this.password = password;
-        this.firstName = firstName;
-        this.lastName = lastName;
+        this.displayName = displayName;
     }
 
     // Getters and Setters
@@ -69,19 +64,11 @@ public class RegisterRequestDto {
         this.password = password;
     }
 
-    public String getFirstName() {
-        return firstName;
+    public String getDisplayName() {
+        return displayName;
     }
 
-    public void setFirstName(String firstName) {
-        this.firstName = firstName;
-    }
-
-    public String getLastName() {
-        return lastName;
-    }
-
-    public void setLastName(String lastName) {
-        this.lastName = lastName;
+    public void setDisplayName(String displayName) {
+        this.displayName = displayName;
     }
 }

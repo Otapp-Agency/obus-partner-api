@@ -20,6 +20,10 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class CreatePartnerRequestDto {
 
+    @NotBlank(message = "Code is required")
+    @Size(max = 50, message = "Code must not exceed 50 characters")
+    private String code;
+
     @NotBlank(message = "Business name is required")
     @Size(max = 255, message = "Business name must not exceed 255 characters")
     private String businessName;

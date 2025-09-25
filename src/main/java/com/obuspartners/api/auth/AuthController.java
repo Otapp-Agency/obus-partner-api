@@ -17,7 +17,7 @@ import com.obuspartners.modules.auth_management.service.RefreshTokenService;
 import com.obuspartners.modules.auth_management.util.JwtUtil;
 import com.obuspartners.modules.common.exception.DuplicateResourceException;
 import com.obuspartners.modules.common.util.ResponseWrapper;
-import com.obuspartners.modules.user_and_role_management.domain.entity.Role;
+import com.obuspartners.modules.user_and_role_management.domain.enums.UserType;
 import com.obuspartners.modules.user_and_role_management.domain.entity.User;
 import com.obuspartners.modules.user_and_role_management.service.UserService;
 
@@ -80,7 +80,7 @@ public class AuthController {
             refreshToken.getToken(),
             user.getUsername(),
             user.getEmail(),
-            user.getRole().name()
+            user.getUserType().name()
         );
 
         return ResponseEntity.ok(new ResponseWrapper<>(true, 200, "Login successful", response));
@@ -109,10 +109,9 @@ public class AuthController {
             registerRequest.getUsername(),
             registerRequest.getEmail(),
             registerRequest.getPassword(),
-            registerRequest.getFirstName(),
-            registerRequest.getLastName()
+            registerRequest.getDisplayName(),
+            UserType.AGENT
         );
-        user.setRole(Role.USER);
         
         // Save user (password will be encoded in UserService)
         userService.save(user);
@@ -158,7 +157,7 @@ public class AuthController {
             newRefreshToken.getToken(),
             user.getUsername(),
             user.getEmail(),
-            user.getRole().name()
+            user.getUserType().name()
         );
 
         return ResponseEntity.ok(new ResponseWrapper<>(true, 200, "Token refreshed successfully", response));
