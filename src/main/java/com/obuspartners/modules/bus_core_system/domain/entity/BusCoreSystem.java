@@ -43,6 +43,10 @@ public class BusCoreSystem extends BaseEntity {
     private String uid;
     
     // === Basic Information ===
+    @NotBlank(message = "System code is required")
+    @Column(name = "code", nullable = false, unique = true, length = 20)
+    private String code;
+    
     @NotBlank(message = "System name is required")
     @Column(name = "name", nullable = false, unique = true)
     private String name;

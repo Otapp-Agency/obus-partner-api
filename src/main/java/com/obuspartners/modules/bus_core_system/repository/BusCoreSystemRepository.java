@@ -20,6 +20,14 @@ import java.util.Optional;
 public interface BusCoreSystemRepository extends JpaRepository<BusCoreSystem, Long> {
     
     /**
+     * Find bus core system by code (excluding soft deleted)
+     * 
+     * @param code the system code
+     * @return Optional containing the system if found
+     */
+    Optional<BusCoreSystem> findByCodeAndIsDeletedFalse(String code);
+    
+    /**
      * Find bus core system by name (excluding soft deleted)
      * 
      * @param name the system name
@@ -56,6 +64,24 @@ public interface BusCoreSystemRepository extends JpaRepository<BusCoreSystem, Lo
      * @return list of systems ordered by name
      */
     List<BusCoreSystem> findByIsDeletedFalseOrderByNameAsc();
+    
+    /**
+     * Check if system code exists (excluding given id)
+     * 
+     * @param code the system code
+     * @param id the system id to exclude
+     * @return true if code exists, false otherwise
+     */
+    @Query("SELECT COUNT(s) > 0 FROM BusCoreSystem s WHERE s.code = :code AND s.id != :id")
+    boolean existsByCodeAndIdNot(@Param("code") String code, @Param("id") Long id);
+    
+    /**
+     * Check if system code exists
+     * 
+     * @param code the system code
+     * @return true if code exists, false otherwise
+     */
+    boolean existsByCode(String code);
     
     /**
      * Check if system name exists (excluding given id)

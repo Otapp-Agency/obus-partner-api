@@ -16,6 +16,7 @@ public class BusCoreSystemResponseDto {
     
     private Long id;
     private String uid;
+    private String code;
     private String name;
     private String providerName;
     private String baseUrl;

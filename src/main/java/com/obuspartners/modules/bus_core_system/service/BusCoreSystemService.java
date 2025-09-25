@@ -51,6 +51,15 @@ public interface BusCoreSystemService {
     BusCoreSystemResponseDto getByUid(String uid);
     
     /**
+     * Get a bus core system by code
+     * 
+     * @param code the system code
+     * @return the system response DTO
+     * @throws ApiException if system not found
+     */
+    BusCoreSystemResponseDto getByCode(String code);
+    
+    /**
      * Get a bus core system by name
      * 
      * @param name the system name

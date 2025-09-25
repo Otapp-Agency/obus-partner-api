@@ -39,6 +39,11 @@ public class BusCoreSystemServiceImpl implements BusCoreSystemService {
     public BusCoreSystemResponseDto create(CreateBusCoreSystemRequestDto request) {
         log.info("Creating new bus core system: {}", request.getName());
         
+        // Check if code already exists
+        if (busCoreSystemRepository.existsByCode(request.getCode())) {
+            throw new ApiException("System code already exists: " + request.getCode(), HttpStatus.CONFLICT);
+        }
+        
         // Check if name already exists
         if (busCoreSystemRepository.existsByName(request.getName())) {
             throw new ApiException("System name already exists: " + request.getName(), HttpStatus.CONFLICT);
@@ -46,6 +51,7 @@ public class BusCoreSystemServiceImpl implements BusCoreSystemService {
         
         // Create new system
         BusCoreSystem system = new BusCoreSystem();
+        system.setCode(request.getCode());
         system.setName(request.getName());
         system.setProviderName(request.getProviderName());
         system.setBaseUrl(request.getBaseUrl());
@@ -78,12 +84,18 @@ public class BusCoreSystemServiceImpl implements BusCoreSystemService {
         BusCoreSystem system = busCoreSystemRepository.findByUidAndIsDeletedFalse(uid)
             .orElseThrow(() -> new ApiException("Bus core system not found with UID: " + uid, HttpStatus.NOT_FOUND));
         
+        // Check if code already exists (excluding current system)
+        if (busCoreSystemRepository.existsByCodeAndIdNot(request.getCode(), system.getId())) {
+            throw new ApiException("System code already exists: " + request.getCode(), HttpStatus.CONFLICT);
+        }
+        
         // Check if name already exists (excluding current system)
         if (busCoreSystemRepository.existsByNameAndIdNot(request.getName(), system.getId())) {
             throw new ApiException("System name already exists: " + request.getName(), HttpStatus.CONFLICT);
         }
         
         // Update system
+        system.setCode(request.getCode());
         system.setName(request.getName());
         system.setProviderName(request.getProviderName());
         system.setBaseUrl(request.getBaseUrl());
@@ -122,6 +134,15 @@ public class BusCoreSystemServiceImpl implements BusCoreSystemService {
     public BusCoreSystemResponseDto getByUid(String uid) {
         BusCoreSystem system = busCoreSystemRepository.findByUidAndIsDeletedFalse(uid)
             .orElseThrow(() -> new ApiException("Bus core system not found with UID: " + uid, HttpStatus.NOT_FOUND));
+        
+        return mapToResponseDto(system);
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public BusCoreSystemResponseDto getByCode(String code) {
+        BusCoreSystem system = busCoreSystemRepository.findByCodeAndIsDeletedFalse(code)
+            .orElseThrow(() -> new ApiException("Bus core system not found with code: " + code, HttpStatus.NOT_FOUND));
         
         return mapToResponseDto(system);
     }
@@ -216,6 +237,7 @@ public class BusCoreSystemServiceImpl implements BusCoreSystemService {
         BusCoreSystemResponseDto dto = new BusCoreSystemResponseDto();
         dto.setId(system.getId());
         dto.setUid(system.getUid());
+        dto.setCode(system.getCode());
         dto.setName(system.getName());
         dto.setProviderName(system.getProviderName());
         dto.setBaseUrl(system.getBaseUrl());

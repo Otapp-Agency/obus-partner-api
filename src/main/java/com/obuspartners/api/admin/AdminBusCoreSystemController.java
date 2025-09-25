@@ -84,6 +84,19 @@ public class AdminBusCoreSystemController {
     }
 
     /**
+     * Get bus core system by code
+     * 
+     * @param code the system code
+     * @return the system response
+     */
+    @GetMapping("/code/{code}")
+    public ResponseEntity<ResponseWrapper<BusCoreSystemResponseDto>> getBusCoreSystemByCode(@PathVariable String code) {
+        log.debug("Fetching bus core system by code: {}", code);
+        BusCoreSystemResponseDto system = busCoreSystemService.getByCode(code);
+        return ResponseEntity.ok(new ResponseWrapper<>(true, 200, "Bus core system retrieved successfully", system));
+    }
+
+    /**
      * Get bus core system by name
      * 
      * @param name the system name

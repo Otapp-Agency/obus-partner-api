@@ -14,6 +14,10 @@ import lombok.Data;
 @Data
 public class CreateBusCoreSystemRequestDto {
     
+    @NotBlank(message = "System code is required")
+    @Size(max = 20, message = "System code must not exceed 20 characters")
+    private String code;
+    
     @NotBlank(message = "System name is required")
     @Size(max = 100, message = "System name must not exceed 100 characters")
     private String name;
