@@ -8,12 +8,13 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
+import de.huxhorn.sulky.ulid.ULID;
 import com.obuspartners.modules.agent_management.domain.enums.AgentStatus;
 import com.obuspartners.modules.agent_management.domain.enums.AgentType;
 import com.obuspartners.modules.user_and_role_management.domain.entity.User;
+import com.obuspartners.modules.partner_management.domain.entity.Partner;
 
 import java.time.LocalDateTime;
-import java.math.BigDecimal;
 
 /**
  * Agent entity for business operations
@@ -26,22 +27,49 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "agents")
+@Table(name = "agents", 
+       uniqueConstraints = {
+           @UniqueConstraint(columnNames = {"partner_id", "partnerAgentNumber"})
+       })
 public class Agent {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(unique = true, nullable = false, length = 26)
+    private String uid;
+
     // Bidirectional reference to User entity
     @OneToOne(mappedBy = "agent", fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;
 
-    @Column(name = "agent_code", unique = true, nullable = false)
-    @NotBlank(message = "Agent code is required")
-    @Size(max = 20, message = "Agent code must not exceed 20 characters")
-    private String agentCode;
+    // Agent belongs to a partner
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "partner_id", nullable = false)
+    @NotNull(message = "Partner is required")
+    private Partner partner;
+
+    // Super agent relationship for sub-agents
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "super_agent_id")
+    private Agent superAgent;
+
+    @Column(name = "code", unique = true, nullable = false)
+    @NotBlank(message = "Code is required")
+    @Size(max = 50, message = "Code must not exceed 50 characters")
+    private String code;
+
+    @Column(name = "partner_agent_number", nullable = false)
+    @NotBlank(message = "Partner agent number is required")
+    @Size(max = 50, message = "Partner agent number must not exceed 50 characters")
+    private String partnerAgentNumber;
+
+    @Column(name = "login_username", unique = true, nullable = false)
+    @NotBlank(message = "Login username is required")
+    @Size(max = 100, message = "Login username must not exceed 100 characters")
+    private String loginUsername;
 
     @Column(name = "business_name")
     @Size(max = 200, message = "Business name must not exceed 200 characters")
@@ -82,14 +110,6 @@ public class Agent {
     @NotNull(message = "Agent status is required")
     private AgentStatus status = AgentStatus.PENDING_APPROVAL;
 
-    @Column(name = "commission_rate", precision = 5, scale = 2)
-    private BigDecimal commissionRate;
-
-    @Column(name = "credit_limit", precision = 15, scale = 2)
-    private BigDecimal creditLimit;
-
-    @Column(name = "current_balance", precision = 15, scale = 2)
-    private BigDecimal currentBalance = BigDecimal.ZERO;
 
     @Column(name = "registration_date", nullable = false)
     private LocalDateTime registrationDate;
@@ -109,21 +129,6 @@ public class Agent {
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-
-    // Custom constructors
-    public Agent(String agentCode, AgentType agentType) {
-        this.agentCode = agentCode;
-        this.agentType = agentType;
-        this.status = AgentStatus.PENDING_APPROVAL;
-        this.currentBalance = BigDecimal.ZERO;
-        this.registrationDate = LocalDateTime.now();
-        this.createdAt = LocalDateTime.now();
-    }
-
-    public Agent(String agentCode, String businessName, AgentType agentType) {
-        this(agentCode, agentType);
-        this.businessName = businessName;
-    }
 
     // Business methods
     public boolean isActive() {
@@ -160,8 +165,45 @@ public class Agent {
         this.updatedAt = LocalDateTime.now();
     }
 
+    // Partner relationship methods
+    public boolean belongsToPartner(Partner partner) {
+        return this.partner != null && this.partner.equals(partner);
+    }
+
+    // Super agent relationship methods
+    public boolean isSubAgent() {
+        return this.agentType == AgentType.SUB_AGENT && this.superAgent != null;
+    }
+
+    public boolean isSuperAgent() {
+        return this.agentType == AgentType.SUPER_AGENT;
+    }
+
+    public boolean hasSubAgents() {
+        // This would need to be implemented with a query or collection
+        // For now, we'll return false as we don't have the reverse relationship
+        return false;
+    }
+
+    public void assignSuperAgent(Agent superAgent) {
+        if (this.agentType == AgentType.SUB_AGENT) {
+            this.superAgent = superAgent;
+            this.updatedAt = LocalDateTime.now();
+        }
+    }
+
     @PreUpdate
     public void preUpdate() {
         this.updatedAt = LocalDateTime.now();
+    }
+
+    @PrePersist
+    public void ensureUid() {
+        if (uid == null) {
+            uid = new ULID().nextULID();
+        }
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now();
+        }
     }
 }

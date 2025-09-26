@@ -25,6 +25,11 @@ public enum AgentType {
     FRANCHISE("FRANCHISE", "Franchise", "Franchise agent", "#20C997"),
     
     /**
+     * Super agent (can have sub-agents)
+     */
+    SUPER_AGENT("SUPER_AGENT", "Super Agent", "Super agent (can have sub-agents)", "#007BFF"),
+    
+    /**
      * Sub-agent (under another agent)
      */
     SUB_AGENT("SUB_AGENT", "Sub-Agent", "Sub-agent (under another agent)", "#FD7E14");
@@ -102,5 +107,23 @@ public enum AgentType {
      */
     public boolean requiresBusinessRegistration() {
         return this == CORPORATE || this == FRANCHISE;
+    }
+    
+    /**
+     * Check if this agent type can have sub-agents
+     * 
+     * @return true if the agent type can have sub-agents
+     */
+    public boolean canHaveSubAgents() {
+        return this == SUPER_AGENT;
+    }
+    
+    /**
+     * Check if this agent type requires a super agent
+     * 
+     * @return true if the agent type requires a super agent
+     */
+    public boolean requiresSuperAgent() {
+        return this == SUB_AGENT;
     }
 }

@@ -147,6 +147,11 @@ public class Partner extends BaseEntity {
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
 
+    // API Keys relationship
+    @OneToMany(mappedBy = "partner", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OnDelete(action = OnDeleteAction.CASCADE)
+    private java.util.List<PartnerApiKey> apiKeys = new java.util.ArrayList<>();
+
     // === User Tracking ===
     @ManyToOne(targetEntity = User.class, fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "created_by", nullable = false, updatable = false)

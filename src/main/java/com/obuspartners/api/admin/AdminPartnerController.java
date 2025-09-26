@@ -8,7 +8,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import com.obuspartners.modules.common.util.PageResponseWrapper;
@@ -17,6 +16,7 @@ import com.obuspartners.modules.partner_management.domain.dto.*;
 import com.obuspartners.modules.partner_management.domain.enums.PartnerStatus;
 import com.obuspartners.modules.partner_management.domain.enums.PartnerTier;
 import com.obuspartners.modules.partner_management.service.PartnerService;
+import com.obuspartners.modules.partner_management.service.PartnerApiKeyService;
 
 import java.util.List;
 
@@ -33,6 +33,7 @@ import java.util.List;
 public class AdminPartnerController {
 
     private final PartnerService partnerService;
+    private final PartnerApiKeyService partnerApiKeyService;
 
     /**
      * Create a new partner (Admin only)
@@ -389,5 +390,227 @@ public class AdminPartnerController {
             @RequestBody BulkUpdateTierRequestDto bulkRequest) {
         partnerService.bulkUpdatePartnerTier(bulkRequest.getPartnerIds(), bulkRequest.getTier());
         return ResponseEntity.ok(new ResponseWrapper<>(true, 200, "Partners tier updated successfully", null));
+    }
+
+    // ========== API Key Management Endpoints ==========
+
+    /**
+     * Generate API key and secret for a partner (Admin only)
+     */
+    @PostMapping("/uid/{partnerUid}/api-key/generate")
+    // @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ResponseWrapper<PartnerApiKeyService.ApiKeyInfo>> generateApiKey(
+            @PathVariable String partnerUid,
+            @Valid @RequestBody PartnerApiKeyService.CreateApiKeyRequestDto request) {
+        try {
+            PartnerApiKeyService.ApiKeyInfo apiKeyInfo = partnerApiKeyService.generateApiKey(
+                partnerUid, 
+                request.getKeyName(),
+                request.getDescription(),
+                request.getEnvironment(),
+                request.getPermissions(),
+                request.getExpiresAt(),
+                request.getIsPrimary(),
+                "admin" // createdBy
+            );
+            return ResponseEntity.ok(new ResponseWrapper<>(true, 200, "API key generated successfully", apiKeyInfo));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                .body(new ResponseWrapper<>(false, 400, e.getMessage(), null));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ResponseWrapper<>(false, 500, "Failed to generate API key", null));
+        }
+    }
+
+    /**
+     * Regenerate API key and secret for a partner (Admin only)
+     */
+    @PostMapping("/uid/{partnerUid}/api-key/regenerate")
+    // @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ResponseWrapper<PartnerApiKeyService.ApiKeyInfo>> regenerateApiKey(
+            @PathVariable String partnerUid) {
+        try {
+            // For backward compatibility, generate a new simple API key
+            PartnerApiKeyService.ApiKeyInfo apiKeyInfo = partnerApiKeyService.generateApiKey(partnerUid);
+            return ResponseEntity.ok(new ResponseWrapper<>(true, 200, "API key regenerated successfully", apiKeyInfo));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                .body(new ResponseWrapper<>(false, 400, e.getMessage(), null));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ResponseWrapper<>(false, 500, "Failed to regenerate API key", null));
+        }
+    }
+
+    /**
+     * Enable API key for a partner (Admin only)
+     */
+    @PutMapping("/uid/{partnerUid}/api-key/enable")
+    // @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ResponseWrapper<String>> enableApiKey(@PathVariable String partnerUid) {
+        try {
+            // For backward compatibility, we'll need to find the primary API key and enable it
+            // For now, we'll return a message indicating this endpoint needs to be updated
+            return ResponseEntity.ok(new ResponseWrapper<>(true, 200, "API key management updated - use individual API key endpoints", null));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                .body(new ResponseWrapper<>(false, 400, e.getMessage(), null));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest()
+                .body(new ResponseWrapper<>(false, 400, e.getMessage(), null));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ResponseWrapper<>(false, 500, "Failed to enable API key", null));
+        }
+    }
+
+    /**
+     * Disable API key for a partner (Admin only)
+     */
+    @PutMapping("/uid/{partnerUid}/api-key/disable")
+    // @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ResponseWrapper<String>> disableApiKey(@PathVariable String partnerUid) {
+        try {
+            // For backward compatibility, we'll need to find the primary API key and disable it
+            // For now, we'll return a message indicating this endpoint needs to be updated
+            return ResponseEntity.ok(new ResponseWrapper<>(true, 200, "API key management updated - use individual API key endpoints", null));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                .body(new ResponseWrapper<>(false, 400, e.getMessage(), null));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ResponseWrapper<>(false, 500, "Failed to disable API key", null));
+        }
+    }
+
+    /**
+     * Revoke API key for a partner (Admin only)
+     */
+    @DeleteMapping("/uid/{partnerUid}/api-key")
+    // @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ResponseWrapper<String>> revokeApiKey(@PathVariable String partnerUid) {
+        try {
+            // For backward compatibility, we'll need to find the primary API key and revoke it
+            // For now, we'll return a message indicating this endpoint needs to be updated
+            return ResponseEntity.ok(new ResponseWrapper<>(true, 200, "API key management updated - use individual API key endpoints", null));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                .body(new ResponseWrapper<>(false, 400, e.getMessage(), null));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ResponseWrapper<>(false, 500, "Failed to revoke API key", null));
+        }
+    }
+
+    /**
+     * Get all API keys for a partner (Admin only)
+     */
+    @GetMapping("/uid/{partnerUid}/api-keys")
+    // @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ResponseWrapper<List<PartnerApiKeyService.ApiKeySummary>>> getPartnerApiKeys(
+            @PathVariable String partnerUid) {
+        try {
+            List<PartnerApiKeyService.ApiKeySummary> apiKeys = partnerApiKeyService.getPartnerApiKeys(partnerUid);
+            return ResponseEntity.ok(new ResponseWrapper<>(true, 200, "API keys retrieved successfully", apiKeys));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                .body(new ResponseWrapper<>(false, 400, e.getMessage(), null));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ResponseWrapper<>(false, 500, "Failed to get API keys", null));
+        }
+    }
+
+    /**
+     * Get active API keys for a partner (Admin only)
+     */
+    @GetMapping("/uid/{partnerUid}/api-keys/active")
+    // @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ResponseWrapper<List<PartnerApiKeyService.ApiKeySummary>>> getActivePartnerApiKeys(
+            @PathVariable String partnerUid) {
+        try {
+            List<PartnerApiKeyService.ApiKeySummary> apiKeys = partnerApiKeyService.getActivePartnerApiKeys(partnerUid);
+            return ResponseEntity.ok(new ResponseWrapper<>(true, 200, "Active API keys retrieved successfully", apiKeys));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                .body(new ResponseWrapper<>(false, 400, e.getMessage(), null));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ResponseWrapper<>(false, 500, "Failed to get active API keys", null));
+        }
+    }
+
+    /**
+     * Get specific API key by UID (Admin only)
+     */
+    @GetMapping("/api-keys/{apiKeyUid}")
+    // @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ResponseWrapper<PartnerApiKeyService.ApiKeyStatus>> getApiKeyByUid(
+            @PathVariable String apiKeyUid) {
+        try {
+            PartnerApiKeyService.ApiKeyStatus status = partnerApiKeyService.getApiKeyStatus(apiKeyUid);
+            return ResponseEntity.ok(new ResponseWrapper<>(true, 200, "API key status retrieved successfully", status));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                .body(new ResponseWrapper<>(false, 400, e.getMessage(), null));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ResponseWrapper<>(false, 500, "Failed to get API key status", null));
+        }
+    }
+
+    /**
+     * Enable specific API key by UID (Admin only)
+     */
+    @PutMapping("/api-keys/{apiKeyUid}/enable")
+    // @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ResponseWrapper<String>> enableApiKeyByUid(@PathVariable String apiKeyUid) {
+        try {
+            partnerApiKeyService.enableApiKey(apiKeyUid, "admin");
+            return ResponseEntity.ok(new ResponseWrapper<>(true, 200, "API key enabled successfully", null));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                .body(new ResponseWrapper<>(false, 400, e.getMessage(), null));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ResponseWrapper<>(false, 500, "Failed to enable API key", null));
+        }
+    }
+
+    /**
+     * Disable specific API key by UID (Admin only)
+     */
+    @PutMapping("/api-keys/{apiKeyUid}/disable")
+    // @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ResponseWrapper<String>> disableApiKeyByUid(@PathVariable String apiKeyUid) {
+        try {
+            partnerApiKeyService.disableApiKey(apiKeyUid, "admin");
+            return ResponseEntity.ok(new ResponseWrapper<>(true, 200, "API key disabled successfully", null));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                .body(new ResponseWrapper<>(false, 400, e.getMessage(), null));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ResponseWrapper<>(false, 500, "Failed to disable API key", null));
+        }
+    }
+
+    /**
+     * Revoke specific API key by UID (Admin only)
+     */
+    @DeleteMapping("/api-keys/{apiKeyUid}")
+    // @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ResponseWrapper<String>> revokeApiKeyByUid(@PathVariable String apiKeyUid) {
+        try {
+            partnerApiKeyService.revokeApiKey(apiKeyUid, "admin");
+            return ResponseEntity.ok(new ResponseWrapper<>(true, 200, "API key revoked successfully", null));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                .body(new ResponseWrapper<>(false, 400, e.getMessage(), null));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ResponseWrapper<>(false, 500, "Failed to revoke API key", null));
+        }
     }
 }

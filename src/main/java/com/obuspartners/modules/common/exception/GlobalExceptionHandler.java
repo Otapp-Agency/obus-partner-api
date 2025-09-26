@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 
+import jakarta.servlet.ServletException;
+
 import com.obuspartners.modules.common.util.ResponseWrapper;
 
 /**
@@ -53,6 +55,56 @@ public class GlobalExceptionHandler {
         log.error("Bad credentials: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(new ResponseWrapper<>(false, 401, "Invalid username or password", null));
+    }
+
+    @ExceptionHandler(ApiKeyAuthenticationException.class)
+    public ResponseEntity<ResponseWrapper<Void>> handleApiKeyAuthenticationException(
+            ApiKeyAuthenticationException ex, WebRequest request) {
+        log.error("API Key Authentication Exception: {}", ex.getMessage());
+        return ResponseEntity.status(ex.getStatusCode())
+                .body(new ResponseWrapper<>(false, ex.getStatusCode().value(), ex.getMessage(), null));
+    }
+
+    @ExceptionHandler(MissingApiKeyException.class)
+    public ResponseEntity<ResponseWrapper<Void>> handleMissingApiKeyException(
+            MissingApiKeyException ex, WebRequest request) {
+        log.warn("Missing API key: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(new ResponseWrapper<>(false, 401, ex.getMessage(), null));
+    }
+
+    @ExceptionHandler(InvalidApiKeyException.class)
+    public ResponseEntity<ResponseWrapper<Void>> handleInvalidApiKeyException(
+            InvalidApiKeyException ex, WebRequest request) {
+        log.warn("Invalid API key: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(new ResponseWrapper<>(false, 401, ex.getMessage(), null));
+    }
+
+    @ExceptionHandler(ApiKeyAuthErrorException.class)
+    public ResponseEntity<ResponseWrapper<Void>> handleApiKeyAuthErrorException(
+            ApiKeyAuthErrorException ex, WebRequest request) {
+        log.error("API Key Auth Error: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(new ResponseWrapper<>(false, 401, ex.getMessage(), null));
+    }
+
+    @ExceptionHandler(ServletException.class)
+    public ResponseEntity<ResponseWrapper<Void>> handleServletException(
+            ServletException ex, WebRequest request) {
+        // Check if the ServletException wraps an ApiKeyAuthenticationException
+        Throwable cause = ex.getCause();
+        if (cause instanceof ApiKeyAuthenticationException) {
+            ApiKeyAuthenticationException apiKeyEx = (ApiKeyAuthenticationException) cause;
+            log.error("API Key Authentication Exception (via ServletException): {}", apiKeyEx.getMessage());
+            return ResponseEntity.status(apiKeyEx.getStatusCode())
+                    .body(new ResponseWrapper<>(false, apiKeyEx.getStatusCode().value(), apiKeyEx.getMessage(), null));
+        }
+        
+        // Handle other ServletExceptions
+        log.error("Servlet Exception: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ResponseWrapper<>(false, 500, "Internal server error", null));
     }
 
     @ExceptionHandler(ApiException.class)

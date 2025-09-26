@@ -63,13 +63,6 @@ public interface PartnerRepository extends JpaRepository<Partner, Long> {
      */
     Optional<Partner> findByBusinessRegistrationNumber(String businessRegistrationNumber);
 
-    /**
-     * Find partner by tax identification number
-     * 
-     * @param taxIdentificationNumber the tax identification number
-     * @return Optional containing the partner if found
-     */
-    Optional<Partner> findByTaxIdentificationNumber(String taxIdentificationNumber);
 
     /**
      * Check if UID exists
