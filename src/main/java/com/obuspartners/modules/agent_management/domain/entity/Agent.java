@@ -71,6 +71,11 @@ public class Agent {
     @Size(max = 100, message = "Login username must not exceed 100 characters")
     private String loginUsername;
 
+    @Column(name = "login_password", nullable = false)
+    @NotBlank(message = "Login password is required")
+    @Size(max = 255, message = "Login password must not exceed 255 characters")
+    private String loginPassword;
+
     @Column(name = "business_name")
     @Size(max = 200, message = "Business name must not exceed 200 characters")
     private String businessName;

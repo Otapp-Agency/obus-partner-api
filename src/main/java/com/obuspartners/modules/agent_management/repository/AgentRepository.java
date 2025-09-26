@@ -59,6 +59,15 @@ public interface AgentRepository extends JpaRepository<Agent, Long> {
     Optional<Agent> findByLoginUsername(String loginUsername);
 
     /**
+     * Find agent by login username and password
+     * 
+     * @param loginUsername the login username
+     * @param loginPassword the login password
+     * @return Optional containing the agent if found
+     */
+    Optional<Agent> findByLoginUsernameAndLoginPassword(String loginUsername, String loginPassword);
+
+    /**
      * Find agent by business email
      * 
      * @param businessEmail the business email address

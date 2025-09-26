@@ -28,14 +28,17 @@ public class SecurityConfig {
 
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
     private final JwtRequestFilter jwtRequestFilter;
+    private final AgentJwtRequestFilter agentJwtRequestFilter;
 
     @Autowired
     private ApiKeyAuthenticationFilter apiKeyAuthenticationFilter;
 
     public SecurityConfig(JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint,
-                         JwtRequestFilter jwtRequestFilter) {
+                         JwtRequestFilter jwtRequestFilter,
+                         AgentJwtRequestFilter agentJwtRequestFilter) {
         this.jwtAuthenticationEntryPoint = jwtAuthenticationEntryPoint;
         this.jwtRequestFilter = jwtRequestFilter;
+        this.agentJwtRequestFilter = agentJwtRequestFilter;
     }
 
     @Bean
@@ -53,8 +56,10 @@ public class SecurityConfig {
         http.csrf(AbstractHttpConfigurer::disable)
             .authorizeHttpRequests(authz -> authz
                 .requestMatchers("/v1/auth/login", "/v1/auth/register", "/v1/auth/refresh", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                .requestMatchers("/v1/auth/agent/login").permitAll()
                 .requestMatchers("/v1/partners/public/**").permitAll()
                 .requestMatchers("/partner/**").authenticated() // Just require authentication, no specific role
+                .requestMatchers("/api/agent/**").hasRole("AGENT")
                 .anyRequest().authenticated()
             )
             .exceptionHandling(ex -> ex.authenticationEntryPoint(jwtAuthenticationEntryPoint))
@@ -62,6 +67,7 @@ public class SecurityConfig {
 
         http.addFilterBefore(apiKeyAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         http.addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
+        http.addFilterBefore(agentJwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

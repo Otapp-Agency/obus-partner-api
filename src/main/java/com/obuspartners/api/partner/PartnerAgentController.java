@@ -66,7 +66,8 @@ public class PartnerAgentController {
             response.setUid(agentResponse.getUid());
             response.setAgentCode(agentResponse.getCode());
             response.setPartnerAgentNumber(agentResponse.getPartnerAgentNumber());
-            response.setLoginUsername(agentResponse.getLoginUsername());
+        response.setLoginUsername(agentResponse.getLoginUsername());
+        // Note: loginPassword is sent via email for security reasons
             response.setBusinessName(agentResponse.getBusinessName());
             response.setContactPerson(agentResponse.getContactPerson());
             response.setPhoneNumber(agentResponse.getPhoneNumber());
@@ -115,6 +116,7 @@ public class PartnerAgentController {
         private String agentCode;
         private String partnerAgentNumber;
         private String loginUsername;
+        // Note: loginPassword is sent via email for security reasons
         private String businessName;
         private String contactPerson;
         private String phoneNumber;
@@ -157,6 +159,7 @@ public class PartnerAgentController {
         public void setPartnerAgentNumber(String partnerAgentNumber) { this.partnerAgentNumber = partnerAgentNumber; }
         public String getLoginUsername() { return loginUsername; }
         public void setLoginUsername(String loginUsername) { this.loginUsername = loginUsername; }
+        // Note: loginPassword getter/setter removed - sent via email for security
         public String getBusinessName() { return businessName; }
         public void setBusinessName(String businessName) { this.businessName = businessName; }
         public String getContactPerson() { return contactPerson; }

@@ -23,6 +23,7 @@ import com.obuspartners.modules.agent_management.domain.enums.AgentType;
 import com.obuspartners.modules.agent_management.repository.AgentRepository;
 import com.obuspartners.modules.partner_management.domain.entity.Partner;
 import com.obuspartners.modules.partner_management.repository.PartnerRepository;
+import com.obuspartners.modules.common.service.EmailService;
 
 /**
  * Implementation of AgentService for managing agent operations
@@ -38,6 +39,7 @@ public class AgentServiceImpl implements AgentService {
 
     private final AgentRepository agentRepository;
     private final PartnerRepository partnerRepository;
+    private final EmailService emailService;
 
     // CRUD Operations
 
@@ -85,9 +87,15 @@ public class AgentServiceImpl implements AgentService {
         
         // Generate login username
         agent.setLoginUsername(generateLoginUsername(partner.getCode(), createRequest.getPartnerAgentNumber()));
+        
+        // Generate login password
+        agent.setLoginPassword(generateLoginPassword());
 
         Agent savedAgent = agentRepository.save(agent);
         log.info("Agent created successfully with UID: {}", savedAgent.getUid());
+
+        // Send credentials email to agent
+        sendAgentCredentialsEmail(savedAgent);
 
         return mapToAgentResponseDto(savedAgent);
     }
@@ -788,6 +796,7 @@ public class AgentServiceImpl implements AgentService {
         dto.setCode(agent.getCode());
         dto.setPartnerAgentNumber(agent.getPartnerAgentNumber());
         dto.setLoginUsername(agent.getLoginUsername());
+        dto.setLoginPassword(agent.getLoginPassword());
         dto.setBusinessName(agent.getBusinessName());
         dto.setContactPerson(agent.getContactPerson());
         dto.setPhoneNumber(agent.getPhoneNumber());
@@ -879,5 +888,59 @@ public class AgentServiceImpl implements AgentService {
      */
     private String generateLoginUsername(String partnerCode, String partnerAgentNumber) {
         return partnerCode + "-" + partnerAgentNumber;
+    }
+    
+    /**
+     * Generate login password for agent
+     * 
+     * @return generated password
+     */
+    private String generateLoginPassword() {
+        // Generate a random 8-character password
+        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        StringBuilder password = new StringBuilder();
+        java.util.Random random = new java.util.Random();
+        
+        for (int i = 0; i < 8; i++) {
+            password.append(chars.charAt(random.nextInt(chars.length())));
+        }
+        
+        return password.toString();
+    }
+    
+    /**
+     * Send agent credentials email
+     * 
+     * @param agent the agent entity
+     */
+    private void sendAgentCredentialsEmail(Agent agent) {
+        try {
+            String subject = "Welcome to OTAPP PARTNERS – Your Agent Account Credentials";
+            String message = String.format(
+                "Hello %s,\n\n" +
+                "Your OTAPP PARTNERS agent account has been successfully created.\n\n" + 
+                "Here are your login credentials:\n" +
+                "- Agent Number: %s\n" +
+                "- Login Password: %s\n\n" +
+                "Please keep these credentials secure and do not share them with anyone.\n\n" +
+                "Login Instructions:\n" +
+                "1. Use your agent number (%s) and password to login\n" +
+                "2. The system will automatically create your username\n" +
+                "3. Contact your partner for login assistance if needed\n\n" +
+                "If you did not request this account, please contact our support team.\n\n" +
+                "Regards,\nOTAPP Support Team",
+                agent.getContactPerson(),
+                agent.getPartnerAgentNumber(),
+                agent.getLoginPassword(),
+                agent.getPartnerAgentNumber()
+            );
+
+            emailService.sendEmail(agent.getBusinessEmail(), subject, message);
+            log.info("Agent credentials email sent successfully to: {}", agent.getBusinessEmail());
+            
+        } catch (Exception e) {
+            log.error("Failed to send agent credentials email to {}: {}", agent.getBusinessEmail(), e.getMessage(), e);
+            // Don't throw exception to avoid failing agent creation if email fails
+        }
     }
 }

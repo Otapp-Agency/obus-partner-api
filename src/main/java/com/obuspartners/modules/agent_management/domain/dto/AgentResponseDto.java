@@ -27,6 +27,7 @@ public class AgentResponseDto {
     private String code;
     private String partnerAgentNumber;
     private String loginUsername;
+    private String loginPassword;
     private String businessName;
     private String contactPerson;
     private String phoneNumber;
@@ -59,4 +60,13 @@ public class AgentResponseDto {
     private Long userId;
     private String userUsername;
     private String userEmail;
+    
+    // Manual getter and setter for loginPassword to ensure it works
+    public String getLoginPassword() {
+        return loginPassword;
+    }
+    
+    public void setLoginPassword(String loginPassword) {
+        this.loginPassword = loginPassword;
+    }
 }
