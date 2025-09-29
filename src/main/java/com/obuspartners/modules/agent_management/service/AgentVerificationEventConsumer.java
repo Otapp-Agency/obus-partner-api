@@ -273,7 +273,7 @@ public class AgentVerificationEventConsumer {
                                 MixxAccountInfoResponse mixxResponse = response.getBody();
 
                                 if (mixxResponse.getResult() != null
-                                                && (mixxResponse.getResult() == 0 || mixxResponse.getResult() == 1)) {
+                                                && (mixxResponse.getResult() == 0 || mixxResponse.getResult() == 1)) { // verification bypass
                                         // Verification successful
                                         log.info("MIXX verification successful for agent request: {} - Agent Name: {}",
                                                         agentRequest.getUid(), mixxResponse.getAgentName());
@@ -357,7 +357,7 @@ public class AgentVerificationEventConsumer {
                 verification.setVerificationNotes(notes);
                 partnerAgentVerificationRepository.save(verification);
 
-                
+
                 // Implementation could include:
                 // - Updating verification status in database
                 // - Updating agent status
