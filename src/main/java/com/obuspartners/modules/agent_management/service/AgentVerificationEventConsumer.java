@@ -357,6 +357,7 @@ public class AgentVerificationEventConsumer {
                 verification.setVerificationNotes(notes);
                 partnerAgentVerificationRepository.save(verification);
 
+                
                 // Implementation could include:
                 // - Updating verification status in database
                 // - Updating agent status
