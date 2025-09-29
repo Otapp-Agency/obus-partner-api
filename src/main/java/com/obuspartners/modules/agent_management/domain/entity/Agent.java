@@ -29,7 +29,8 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "agents", 
        uniqueConstraints = {
-           @UniqueConstraint(columnNames = {"partner_id", "partnerAgentNumber"})
+           @UniqueConstraint(columnNames = {"partner_id", "partnerAgentNumber"}),
+           @UniqueConstraint(columnNames = {"partner_id", "msisdn"})
        })
 public class Agent {
 
@@ -88,6 +89,10 @@ public class Agent {
     @Size(max = 20, message = "Phone number must not exceed 20 characters")
     private String phoneNumber;
 
+    @Column(name = "msisdn")
+    @Size(max = 20, message = "MSISDN must not exceed 20 characters")
+    private String msisdn;
+
     @Column(name = "business_email")
     @Email(message = "Business email must be valid")
     @Size(max = 100, message = "Business email must not exceed 100 characters")
@@ -128,6 +133,10 @@ public class Agent {
     @Column(name = "notes", length = 1000)
     @Size(max = 1000, message = "Notes must not exceed 1000 characters")
     private String notes;
+
+    @Column(name = "verification_reference_number", length = 50)
+    @Size(max = 50, message = "Verification reference number must not exceed 50 characters")
+    private String verificationReferenceNumber;
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
@@ -195,6 +204,15 @@ public class Agent {
             this.superAgent = superAgent;
             this.updatedAt = LocalDateTime.now();
         }
+    }
+
+    public void setVerificationReferenceNumber(String verificationReferenceNumber) {
+        this.verificationReferenceNumber = verificationReferenceNumber;
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    public boolean isVerified() {
+        return this.verificationReferenceNumber != null && !this.verificationReferenceNumber.trim().isEmpty();
     }
 
     @PreUpdate

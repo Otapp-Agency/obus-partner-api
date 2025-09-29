@@ -28,6 +28,7 @@ public class AgentSearchRequestDto {
     private String contactPerson;
     private String code;
     private String partnerAgentNumber;
+    private String msisdn;
     private AgentStatus status;
     private AgentType agentType;
     private Long partnerId;

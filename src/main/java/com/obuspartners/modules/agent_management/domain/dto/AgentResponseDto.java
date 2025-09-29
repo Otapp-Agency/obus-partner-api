@@ -31,6 +31,7 @@ public class AgentResponseDto {
     private String businessName;
     private String contactPerson;
     private String phoneNumber;
+    private String msisdn;
     private String businessEmail;
     private String businessAddress;
     private String taxId;

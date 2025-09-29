@@ -100,6 +100,15 @@ public interface AgentRepository extends JpaRepository<Agent, Long> {
     Optional<Agent> findByLicenseNumber(String licenseNumber);
 
     /**
+     * Find agent by partner and MSISDN
+     * 
+     * @param partner the partner entity
+     * @param msisdn the MSISDN
+     * @return Optional containing the agent if found
+     */
+    Optional<Agent> findByPartnerAndMsisdn(Partner partner, String msisdn);
+
+    /**
      * Check if UID exists
      * 
      * @param uid the agent UID
@@ -163,6 +172,15 @@ public interface AgentRepository extends JpaRepository<Agent, Long> {
      * @return true if license number exists, false otherwise
      */
     boolean existsByLicenseNumber(String licenseNumber);
+
+    /**
+     * Check if MSISDN exists for a partner
+     * 
+     * @param partner the partner entity
+     * @param msisdn the MSISDN
+     * @return true if MSISDN exists for the partner, false otherwise
+     */
+    boolean existsByPartnerAndMsisdn(Partner partner, String msisdn);
 
     // Partner-related queries
 

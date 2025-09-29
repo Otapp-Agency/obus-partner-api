@@ -31,6 +31,10 @@ public class UpdateAgentRequestDto {
     @Size(max = 20, message = "Phone number must not exceed 20 characters")
     private String phoneNumber;
 
+    @Pattern(regexp = "^[+]?[0-9]{10,20}$", message = "MSISDN format is invalid")
+    @Size(max = 20, message = "MSISDN must not exceed 20 characters")
+    private String msisdn;
+
     @Email(message = "Business email must be valid")
     @Size(max = 100, message = "Business email must not exceed 100 characters")
     private String businessEmail;

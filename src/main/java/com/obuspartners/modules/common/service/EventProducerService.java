@@ -1,6 +1,8 @@
 package com.obuspartners.modules.common.service;
 
+import com.obuspartners.modules.agent_management.domain.event.PartnerAgentVerificationRequestedEvent;
 import com.obuspartners.modules.common.domain.event.DemoEvent;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -67,5 +69,12 @@ public class EventProducerService {
                 .build();
         
         sendEvent("obus.partner.registered", partnerId, event);
+    }
+
+    /**
+     * Send a partner agent verification requested event
+     */
+    public void sendPartnerAgentVerificationRequestedEvent(PartnerAgentVerificationRequestedEvent event) {
+        sendEvent("obus.partner.agent.verification.requested", event.getAgentUid(), event);
     }
 }

@@ -59,6 +59,15 @@ public class KafkaTopicsConfig {
                 .build();
     }
 
+    @Bean
+    public NewTopic partnerAgentVerificationRequestedTopic() {
+        return TopicBuilder.name("obus.partner.agent.verification.requested")
+                .partitions(3)
+                .replicas(1)
+                .config("retention.ms", "2592000000") // 30 days
+                .build();
+    }
+
     // @Bean
     // public NewTopic partnerUpdatedTopic() {
     //     return TopicBuilder.name("obus.partner.updated")
