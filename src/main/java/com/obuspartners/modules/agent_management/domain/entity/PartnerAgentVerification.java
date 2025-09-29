@@ -8,8 +8,9 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import de.huxhorn.sulky.ulid.ULID;
+import com.obuspartners.modules.agent_management.domain.entity.Agent;
+import com.obuspartners.modules.agent_management.domain.entity.AgentRequest;
 import com.obuspartners.modules.agent_management.domain.enums.AgentVerificationStatus;
-import com.obuspartners.modules.agent_management.service.AgentVerificationService.VerificationStatus;
 import com.obuspartners.modules.partner_management.domain.entity.Partner;
 
 import java.time.LocalDateTime;
@@ -27,7 +28,6 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "partner_agent_verifications", 
        uniqueConstraints = {
-           @UniqueConstraint(columnNames = {"partner_id", "agent_id"}),
            @UniqueConstraint(columnNames = {"request_reference_number"})
        })
 public class PartnerAgentVerification {
@@ -45,11 +45,15 @@ public class PartnerAgentVerification {
     @NotNull(message = "Partner is required")
     private Partner partner;
 
-    // Agent being verified
+    // Agent being verified (nullable initially, set after verification approval)
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "agent_id", nullable = false)
-    @NotNull(message = "Agent is required")
+    @JoinColumn(name = "agent_id")
     private Agent agent;
+
+    // Agent Request being verified (nullable if created from existing agent)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "agent_request_id")
+    private AgentRequest agentRequest;
 
     @Column(name = "request_reference_number", nullable = false)
     @NotBlank(message = "Request reference number is required")

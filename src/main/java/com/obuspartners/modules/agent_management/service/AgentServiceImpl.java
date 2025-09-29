@@ -18,13 +18,10 @@ import java.util.stream.Collectors;
 import com.obuspartners.modules.common.exception.ApiException;
 import com.obuspartners.modules.agent_management.domain.dto.*;
 import com.obuspartners.modules.agent_management.domain.entity.Agent;
-import com.obuspartners.modules.agent_management.domain.entity.PartnerAgentVerification;
+import com.obuspartners.modules.agent_management.service.AgentRequestService;
 import com.obuspartners.modules.agent_management.domain.enums.AgentStatus;
 import com.obuspartners.modules.agent_management.domain.enums.AgentType;
-import com.obuspartners.modules.agent_management.domain.enums.AgentVerificationStatus;
-import com.obuspartners.modules.agent_management.domain.event.PartnerAgentVerificationRequestedEvent;
 import com.obuspartners.modules.agent_management.repository.AgentRepository;
-import com.obuspartners.modules.agent_management.repository.PartnerAgentVerificationRepository;
 import com.obuspartners.modules.partner_management.domain.entity.Partner;
 import com.obuspartners.modules.partner_management.repository.PartnerRepository;
 import com.obuspartners.modules.common.service.EmailService;
@@ -44,76 +41,51 @@ public class AgentServiceImpl implements AgentService {
 
     private final AgentRepository agentRepository;
     private final PartnerRepository partnerRepository;
-    private final PartnerAgentVerificationRepository verificationRepository;
     private final EmailService emailService;
     private final EventProducerService eventProducerService;
+    private final AgentRequestService agentRequestService;
 
     // CRUD Operations
 
     @Override
     @Transactional
     public AgentResponseDto createAgent(CreateAgentRequestDto createRequest) {
-        log.info("Creating new agent with partner agent number: {}", createRequest.getPartnerAgentNumber());
+        log.info("Creating new agent request with partner agent number: {}", createRequest.getPartnerAgentNumber());
 
-        // Validate uniqueness of critical fields
-        validateUniqueFields(createRequest);
-
-        // Validate partner exists
-        Partner partner = partnerRepository.findById(createRequest.getPartnerId())
-                .orElseThrow(() -> new ApiException("Partner not found with ID: " + createRequest.getPartnerId(), HttpStatus.NOT_FOUND));
-
-        // Validate super agent if provided
-        Agent superAgent = null;
-        if (createRequest.getSuperAgentId() != null) {
-            superAgent = agentRepository.findById(createRequest.getSuperAgentId())
-                    .orElseThrow(() -> new ApiException("Super agent not found with ID: " + createRequest.getSuperAgentId(), HttpStatus.NOT_FOUND));
-            
-            // Validate super agent assignment
-            validateSuperAgentAssignmentInternal(createRequest.getAgentType(), superAgent);
-        }
-
-        // Create agent entity
-        Agent agent = new Agent();
-        agent.setPartnerAgentNumber(createRequest.getPartnerAgentNumber());
-        agent.setBusinessName(createRequest.getBusinessName());
-        agent.setContactPerson(createRequest.getContactPerson());
-        agent.setPhoneNumber(createRequest.getPhoneNumber());
-        agent.setMsisdn(createRequest.getMsisdn());
-        agent.setBusinessEmail(createRequest.getBusinessEmail());
-        agent.setBusinessAddress(createRequest.getBusinessAddress());
-        agent.setTaxId(createRequest.getTaxId());
-        agent.setLicenseNumber(createRequest.getLicenseNumber());
-        agent.setAgentType(createRequest.getAgentType());
-        agent.setPartner(partner);
-        agent.setSuperAgent(superAgent);
-        agent.setNotes(createRequest.getNotes());
-        agent.setStatus(AgentStatus.PENDING_APPROVAL);
-        agent.setRegistrationDate(LocalDateTime.now());
+        // Delegate to AgentRequestService to create the request
+        // This will create an AgentRequest, PartnerAgentVerification, and send Kafka event
+        var agentRequestResponse = agentRequestService.createAgentRequest(createRequest);
         
-        // Generate system-wide unique code
-        agent.setCode(generateAgentCode());
+        log.info("Agent request created successfully with UID: {}", agentRequestResponse.getUid());
         
-        // Generate login username
-        agent.setLoginUsername(generateLoginUsername(partner.getCode(), createRequest.getPartnerAgentNumber()));
-        
-        // Generate login password
-        agent.setLoginPassword(generateLoginPassword());
-
-        Agent savedAgent = agentRepository.save(agent);
-        log.info("Agent created successfully with UID: {}", savedAgent.getUid());
-
-        // Create verification request
-        PartnerAgentVerification verification = createVerificationRequest(savedAgent, partner);
-        PartnerAgentVerification savedVerification = verificationRepository.save(verification);
-        log.info("Verification request created with UID: {}", savedVerification.getUid());
-
-        // Send Kafka event
-        sendVerificationRequestedEvent(savedAgent, partner, savedVerification);
-
-        // Send credentials email to agent
-        // sendAgentCredentialsEmail(savedAgent);
-
-        return mapToAgentResponseDto(savedAgent);
+        // Return a response indicating the request was created and is pending verification
+        // The actual Agent will be created after successful verification
+        return AgentResponseDto.builder()
+                .uid(agentRequestResponse.getUid()) // Use AgentRequest UID for now
+                .partnerId(agentRequestResponse.getPartnerId())
+                .partnerUid(agentRequestResponse.getPartnerCode()) // Use partnerCode as UID for now
+                .partnerBusinessName(agentRequestResponse.getPartnerBusinessName())
+                .superAgentId(agentRequestResponse.getSuperAgentId())
+                .superAgentUid(agentRequestResponse.getSuperAgentCode()) // Use superAgentCode as UID for now
+                .partnerAgentNumber(agentRequestResponse.getPartnerAgentNumber())
+                .businessName(agentRequestResponse.getBusinessName())
+                .contactPerson(agentRequestResponse.getContactPerson())
+                .phoneNumber(agentRequestResponse.getPhoneNumber())
+                .msisdn(agentRequestResponse.getMsisdn())
+                .businessEmail(agentRequestResponse.getBusinessEmail())
+                .businessAddress(agentRequestResponse.getBusinessAddress())
+                .taxId(agentRequestResponse.getTaxId())
+                .licenseNumber(agentRequestResponse.getLicenseNumber())
+                .agentType(agentRequestResponse.getAgentType())
+                .notes(agentRequestResponse.getNotes())
+                .status(AgentStatus.PENDING_APPROVAL) // Indicate it's pending approval
+                .registrationDate(agentRequestResponse.getRequestedAt())
+                .code(null) // Will be generated after verification
+                .loginUsername(null) // Will be generated after verification
+                .loginPassword(null) // Will be generated after verification
+                .createdAt(agentRequestResponse.getCreatedAt())
+                .updatedAt(agentRequestResponse.getUpdatedAt())
+                .build();
     }
 
     @Override
@@ -929,58 +901,6 @@ public class AgentServiceImpl implements AgentService {
         return password.toString();
     }
 
-    /**
-     * Create verification request for agent
-     */
-    private PartnerAgentVerification createVerificationRequest(Agent agent, Partner partner) {
-        PartnerAgentVerification verification = new PartnerAgentVerification();
-        verification.setPartner(partner);
-        verification.setAgent(agent);
-        // requestReferenceNumber will be auto-generated as ULID in @PrePersist
-        verification.setAgentVerificationStatus(AgentVerificationStatus.PENDING);
-        verification.setVerificationType("DOCUMENT_VERIFICATION");
-        verification.setRequestedBy("SYSTEM"); // Could be passed as parameter
-        verification.setPriority("NORMAL");
-        verification.setRequestedAt(LocalDateTime.now());
-        verification.setExpiresAt(LocalDateTime.now().plusDays(30)); // 30 days expiry
-        return verification;
-    }
-
-    /**
-     * Send verification requested event to Kafka
-     */
-    private void sendVerificationRequestedEvent(Agent agent, Partner partner, PartnerAgentVerification verification) {
-        try {
-            PartnerAgentVerificationRequestedEvent event = PartnerAgentVerificationRequestedEvent.create(
-                    agent.getUid(),
-                    agent.getCode(),
-                    agent.getBusinessName(),
-                    partner.getUid(),
-                    partner.getCode(),
-                    partner.getBusinessName(),
-                    verification.getUid(),
-                    verification.getRequestReferenceNumber(),
-                    verification.getRequestedBy()
-            );
-            
-            // Add additional fields
-            event.setAgentContactPerson(agent.getContactPerson());
-            event.setAgentMsisdn(agent.getMsisdn());
-            event.setAgentBusinessEmail(agent.getBusinessEmail());
-            event.setVerificationType(verification.getVerificationType());
-            event.setPriority(verification.getPriority());
-            event.setRequestedAt(verification.getRequestedAt());
-            event.setExpiresAt(verification.getExpiresAt());
-            
-            eventProducerService.sendPartnerAgentVerificationRequestedEvent(event);
-            log.info("Verification requested event sent for agent: {}", agent.getUid());
-            
-        } catch (Exception e) {
-            log.error("Failed to send verification requested event for agent: {}", agent.getUid(), e);
-            // Don't fail the transaction if event sending fails
-        }
-    }
-    
     /**
      * Send agent credentials email
      * 
