@@ -68,6 +68,15 @@ public class KafkaTopicsConfig {
                 .build();
     }
 
+    @Bean
+    public NewTopic emailNotificationTopic() {
+        return TopicBuilder.name("obus.email.notification")
+                .partitions(3)
+                .replicas(1)
+                .config("retention.ms", "604800000") // 7 days
+                .build();
+    }
+
     // @Bean
     // public NewTopic partnerUpdatedTopic() {
     //     return TopicBuilder.name("obus.partner.updated")

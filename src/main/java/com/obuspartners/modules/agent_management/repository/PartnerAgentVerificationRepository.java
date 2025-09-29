@@ -1,7 +1,7 @@
 package com.obuspartners.modules.agent_management.repository;
 
 import com.obuspartners.modules.agent_management.domain.entity.PartnerAgentVerification;
-import com.obuspartners.modules.agent_management.domain.enums.VerificationStatus;
+import com.obuspartners.modules.agent_management.domain.enums.AgentVerificationStatus;
 import com.obuspartners.modules.partner_management.domain.entity.Partner;
 import com.obuspartners.modules.agent_management.domain.entity.Agent;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -43,12 +43,12 @@ public interface PartnerAgentVerificationRepository extends JpaRepository<Partne
     /**
      * Find verifications by status
      */
-    List<PartnerAgentVerification> findByVerificationStatus(VerificationStatus status);
+    List<PartnerAgentVerification> findByAgentVerificationStatus(AgentVerificationStatus status);
 
     /**
      * Find verifications by partner and status
      */
-    List<PartnerAgentVerification> findByPartnerAndVerificationStatus(Partner partner, VerificationStatus status);
+    List<PartnerAgentVerification> findByPartnerAndAgentVerificationStatus(Partner partner, AgentVerificationStatus status);
 
     /**
      * Check if verification exists for partner and agent
@@ -63,12 +63,17 @@ public interface PartnerAgentVerificationRepository extends JpaRepository<Partne
     /**
      * Find pending verifications
      */
-    @Query("SELECT v FROM PartnerAgentVerification v WHERE v.verificationStatus = 'PENDING' ORDER BY v.requestedAt ASC")
+    @Query("SELECT v FROM PartnerAgentVerification v WHERE v.agentVerificationStatus = 'PENDING' ORDER BY v.requestedAt ASC")
     List<PartnerAgentVerification> findPendingVerifications();
 
     /**
      * Find expired verifications
      */
-    @Query("SELECT v FROM PartnerAgentVerification v WHERE v.expiresAt IS NOT NULL AND v.expiresAt < CURRENT_TIMESTAMP AND v.verificationStatus = 'PENDING'")
+    @Query("SELECT v FROM PartnerAgentVerification v WHERE v.expiresAt IS NOT NULL AND v.expiresAt < CURRENT_TIMESTAMP AND v.agentVerificationStatus = 'PENDING'")
     List<PartnerAgentVerification> findExpiredVerifications();
+
+    Optional<PartnerAgentVerification> findByAgentAndPartnerAndRequestReferenceNumber(Agent agent, Partner partner,
+            String requestReferenceNumber);
+
+
 }

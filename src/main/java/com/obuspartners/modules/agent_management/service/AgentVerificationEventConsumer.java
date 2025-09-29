@@ -12,9 +12,13 @@ import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Service;
 
 import com.obuspartners.modules.agent_management.domain.entity.Agent;
+import com.obuspartners.modules.agent_management.domain.entity.PartnerAgentVerification;
+import com.obuspartners.modules.agent_management.domain.enums.AgentVerificationStatus;
 import com.obuspartners.modules.agent_management.domain.event.PartnerAgentVerificationRequestedEvent;
 import com.obuspartners.modules.agent_management.repository.AgentRepository;
+import com.obuspartners.modules.agent_management.repository.PartnerAgentVerificationRepository;
 import com.obuspartners.modules.common.exception.ApiException;
+import com.obuspartners.modules.common.service.EmailNotificationEventProducer;
 import com.obuspartners.modules.partner_management.domain.entity.Partner;
 import com.obuspartners.modules.partner_management.repository.PartnerRepository;
 
@@ -41,37 +45,35 @@ public class AgentVerificationEventConsumer {
     private final AgentRepository agentRepository;
     private final PartnerRepository partnerRepository;
     private final RestTemplate restTemplate;
+    private final EmailNotificationEventProducer emailNotificationEventProducer;
+    private final PartnerAgentVerificationRepository partnerAgentVerificationRepository;
 
     /**
      * Consume partner agent verification requested events
      */
-    @KafkaListener(
-        topics = "obus.partner.agent.verification.requested",
-        groupId = "obus-partner-api-verification-group",
-        containerFactory = "verificationKafkaListenerContainerFactory"
-    )
+    @KafkaListener(topics = "obus.partner.agent.verification.requested", groupId = "obus-partner-api-verification-group", containerFactory = "verificationKafkaListenerContainerFactory")
     public void handlePartnerAgentVerificationRequested(
             @Payload PartnerAgentVerificationRequestedEvent event,
             @Header(KafkaHeaders.RECEIVED_TOPIC) String topic,
             @Header(KafkaHeaders.RECEIVED_PARTITION) int partition,
             @Header(KafkaHeaders.OFFSET) long offset,
             Acknowledgment acknowledgment) {
-        
-        log.info("Received verification requested event: {} from topic: {}, partition: {}, offset: {}", 
+
+        log.info("Received verification requested event: {} from topic: {}, partition: {}, offset: {}",
                 event.getEventId(), topic, partition, offset);
 
         try {
             // Process the verification request
             processVerificationRequest(event);
-            
+
             // Acknowledge the message
             acknowledgment.acknowledge();
-            
+
             log.info("Successfully processed verification requested event: {}", event.getEventId());
-            
+
         } catch (Exception e) {
             log.error("Failed to process verification requested event: {}", event.getEventId(), e);
-            
+
             // In a real implementation, you might want to:
             // 1. Send to a dead letter queue
             // 2. Retry with exponential backoff
@@ -85,44 +87,42 @@ public class AgentVerificationEventConsumer {
      * Process the verification request
      */
     private void processVerificationRequest(PartnerAgentVerificationRequestedEvent event) {
-        log.info("Processing verification request for agent: {} with reference: {}", 
+        log.info("Processing verification request for agent: {} with reference: {}",
                 event.getAgentUid(), event.getRequestReferenceNumber());
 
         // Here you can implement various verification workflows:
 
         Agent agent = agentRepository.findByUid(event.getAgentUid())
-        .orElseThrow(() -> new ApiException("Agent not found", HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new ApiException("Agent not found", HttpStatus.NOT_FOUND));
 
         Partner partner = partnerRepository.findByUid(event.getPartnerUid())
-        .orElseThrow(() -> new ApiException("Partner not found", HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new ApiException("Partner not found", HttpStatus.NOT_FOUND));
 
         String partnerCode = partner.getCode();
         switch (partnerCode) {
             case "MIXX":
                 performMixxVerification(agent, partner, event);
                 break;
-        
+
             default:
                 throw new ApiException("Invalid partner code", HttpStatus.BAD_REQUEST);
         }
 
-        
-        
         // 1. Send notification to verification team
         sendVerificationNotification(event);
-        
+
         // 2. Create verification tasks in external systems
         createVerificationTasks(event);
-        
+
         // 3. Update verification status if needed
         updateVerificationStatus(event);
-        
+
         // 4. Send email/SMS notifications
         sendNotifications(event);
-        
+
         // 5. Log for audit purposes
         logVerificationRequest(event);
-        
+
         log.info("Completed processing verification request for agent: {}", event.getAgentUid());
     }
 
@@ -131,30 +131,29 @@ public class AgentVerificationEventConsumer {
      */
     private void sendVerificationNotification(PartnerAgentVerificationRequestedEvent event) {
         log.info("Sending verification notification for agent: {} to verification team", event.getAgentUid());
-        
+
         // Implementation could include:
         // - Slack notifications
         // - Email to verification team
         // - Dashboard updates
         // - Mobile push notifications
-        
+
         // Example implementation:
         String notificationMessage = String.format(
-            "New agent verification request:\n" +
-            "Agent: %s (%s)\n" +
-            "Partner: %s (%s)\n" +
-            "Reference: %s\n" +
-            "Priority: %s\n" +
-            "Requested At: %s",
-            event.getAgentBusinessName(),
-            event.getAgentCode(),
-            event.getPartnerBusinessName(),
-            event.getPartnerCode(),
-            event.getRequestReferenceNumber(),
-            event.getPriority(),
-            event.getRequestedAt()
-        );
-        
+                "New agent verification request:\n" +
+                        "Agent: %s (%s)\n" +
+                        "Partner: %s (%s)\n" +
+                        "Reference: %s\n" +
+                        "Priority: %s\n" +
+                        "Requested At: %s",
+                event.getAgentBusinessName(),
+                event.getAgentCode(),
+                event.getPartnerBusinessName(),
+                event.getPartnerCode(),
+                event.getRequestReferenceNumber(),
+                event.getPriority(),
+                event.getRequestedAt());
+
         log.info("Verification notification: {}", notificationMessage);
     }
 
@@ -163,15 +162,15 @@ public class AgentVerificationEventConsumer {
      */
     private void createVerificationTasks(PartnerAgentVerificationRequestedEvent event) {
         log.info("Creating verification tasks for agent: {}", event.getAgentUid());
-        
+
         // Implementation could include:
         // - Creating tasks in project management tools (Jira, Asana)
         // - Adding to verification queue
         // - Creating calendar events for verification team
         // - Integrating with document management systems
-        
+
         // Example implementation:
-        log.info("Created verification task with ID: TASK-{} for agent: {}", 
+        log.info("Created verification task with ID: TASK-{} for agent: {}",
                 event.getRequestReferenceNumber(), event.getAgentUid());
     }
 
@@ -180,12 +179,12 @@ public class AgentVerificationEventConsumer {
      */
     private void updateVerificationStatus(PartnerAgentVerificationRequestedEvent event) {
         log.info("Updating verification status for agent: {}", event.getAgentUid());
-        
+
         // Implementation could include:
         // - Updating status in external systems
         // - Syncing with partner systems
         // - Updating dashboard metrics
-        
+
         // Example implementation:
         log.info("Updated verification status to 'PROCESSING' for agent: {}", event.getAgentUid());
     }
@@ -195,21 +194,21 @@ public class AgentVerificationEventConsumer {
      */
     private void sendNotifications(PartnerAgentVerificationRequestedEvent event) {
         log.info("Sending notifications for agent: {}", event.getAgentUid());
-        
+
         // Implementation could include:
         // - Email to agent about verification status
         // - SMS to agent contact person
         // - Email to partner about verification request
         // - Push notifications to mobile apps
-        
+
         // Example implementation:
         if (event.getAgentBusinessEmail() != null) {
-            log.info("Sending email notification to agent: {} at {}", 
+            log.info("Sending email notification to agent: {} at {}",
                     event.getAgentUid(), event.getAgentBusinessEmail());
         }
-        
+
         if (event.getAgentMsisdn() != null) {
-            log.info("Sending SMS notification to agent: {} at {}", 
+            log.info("Sending SMS notification to agent: {} at {}",
                     event.getAgentUid(), event.getAgentMsisdn());
         }
     }
@@ -226,7 +225,7 @@ public class AgentVerificationEventConsumer {
                 event.getRequestReferenceNumber(),
                 event.getPriority(),
                 event.getRequestedAt());
-        
+
         // Implementation could include:
         // - Writing to audit database
         // - Sending to logging service (ELK, Splunk)
@@ -257,123 +256,226 @@ public class AgentVerificationEventConsumer {
             // Call MIXX API
             String mixxApiUrl = "https://accessgwtest.tigo.co.tz:8443/accountInfo";
             ResponseEntity<MixxAccountInfoResponse> response = restTemplate.postForEntity(
-                mixxApiUrl, 
-                httpEntity, 
-                MixxAccountInfoResponse.class
-            );
+                    mixxApiUrl,
+                    httpEntity,
+                    MixxAccountInfoResponse.class);
 
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 MixxAccountInfoResponse mixxResponse = response.getBody();
-                
-                if (mixxResponse != null && mixxResponse.getResult() != null && mixxResponse.getResult() == 0) {
+
+                if (mixxResponse.getResult() != null && mixxResponse.getResult() == 0) {
                     // Verification successful
-                    log.info("MIXX verification successful for agent: {} - Agent Name: {}", 
+                    log.info("MIXX verification successful for agent: {} - Agent Name: {}",
                             agent.getUid(), mixxResponse.getAgentName());
-                    
+
                     // Update agent verification status
-                    updateAgentVerificationStatus(agent, "APPROVED", 
-                        "MIXX verification successful. Agent Name: " + mixxResponse.getAgentName());
-                    
+                    updateAgentVerificationStatus(agent, partner, event.getRequestReferenceNumber(),
+                            AgentVerificationStatus.APPROVED,
+                            "MIXX verification successful. Agent Name: " + mixxResponse.getAgentName());
+
                     // Send success notification
                     sendMixxVerificationSuccessNotification(agent, partner, mixxResponse);
-                    
+
                 } else {
                     // Verification failed
-                    log.warn("MIXX verification failed for agent: {} - Result: {}, Message: {}", 
+                    log.warn("MIXX verification failed for agent: {} - Result: {}, Message: {}",
                             agent.getUid(), mixxResponse.getResult(), mixxResponse.getMessage());
-                    
+
                     // Update agent verification status
-                    updateAgentVerificationStatus(agent, "REJECTED", 
-                        "MIXX verification failed: " + mixxResponse.getMessage());
-                    
+                    updateAgentVerificationStatus(agent, partner, event.getRequestReferenceNumber(),
+                            AgentVerificationStatus.REJECTED,
+                            "MIXX verification failed: " + mixxResponse.getMessage());
+
                     // Send failure notification
                     sendMixxVerificationFailureNotification(agent, partner, mixxResponse);
                 }
             } else {
-                log.error("MIXX API call failed with status: {} for agent: {}", 
+                log.error("MIXX API call failed with status: {} for agent: {}",
                         response.getStatusCode(), agent.getUid());
-                
+
                 // Update agent verification status
-                updateAgentVerificationStatus(agent, "REJECTED", 
-                    "MIXX API call failed with status: " + response.getStatusCode());
+                updateAgentVerificationStatus(agent, partner, event.getRequestReferenceNumber(),
+                        AgentVerificationStatus.REJECTED,
+                        "MIXX API call failed with status: " + response.getStatusCode());
             }
 
         } catch (Exception e) {
             log.error("Error calling MIXX API for agent: {}", agent.getUid(), e);
-            
+
             // Update agent verification status
-            updateAgentVerificationStatus(agent, "REJECTED", 
-                "MIXX API error: " + e.getMessage());
+            updateAgentVerificationStatus(agent, partner, event.getRequestReferenceNumber(),
+                    AgentVerificationStatus.REJECTED,
+                    "MIXX API error: " + e.getMessage());
         }
     }
 
     /**
      * Update agent verification status
      */
-    private void updateAgentVerificationStatus(Agent agent, String status, String notes) {
+    private void updateAgentVerificationStatus(Agent agent, Partner partner, String requestReferenceNumber,
+            AgentVerificationStatus status, String notes) {
         log.info("Updating verification status for agent: {} to: {}", agent.getUid(), status);
-        
+
+        PartnerAgentVerification verification = partnerAgentVerificationRepository
+                .findByAgentAndPartnerAndRequestReferenceNumber(agent, partner, requestReferenceNumber)
+                .orElseThrow(() -> new ApiException("Could not find verification information", HttpStatus.NOT_FOUND));
+        verification.setAgentVerificationStatus(status);
+        verification.setVerificationNotes(notes);
+        partnerAgentVerificationRepository.save(verification);
+
         // Implementation could include:
         // - Updating verification status in database
         // - Updating agent status
         // - Creating verification history record
         // - Sending status update events
-        
-        log.info("Verification status updated for agent: {} to: {} with notes: {}", 
+
+        log.info("Verification status updated for agent: {} to: {} with notes: {}",
                 agent.getUid(), status, notes);
     }
 
     /**
      * Send MIXX verification success notification
      */
-    private void sendMixxVerificationSuccessNotification(Agent agent, Partner partner, MixxAccountInfoResponse response) {
+    private void sendMixxVerificationSuccessNotification(Agent agent, Partner partner,
+            MixxAccountInfoResponse response) {
         log.info("Sending MIXX verification success notification for agent: {}", agent.getUid());
-        
+
+        // Send email notification to agent
+        if (agent.getBusinessEmail() != null && !agent.getBusinessEmail().trim().isEmpty()) {
+            String agentName = agent.getContactPerson() != null ? agent.getContactPerson() : agent.getBusinessName();
+            String emailSubject = "Agent Verification Successful - " + agent.getBusinessName();
+            String emailBody = String.format(
+                    "Dear %s,\n\n" +
+                            "Congratulations! Your agent verification has been successfully completed.\n\n" +
+                            "Verification Details:\n" +
+                            "• Business Name: %s\n" +
+                            "• Agent Name: %s\n" +
+                            "• MSISDN: %s\n" +
+                            "• Agent Code: %s\n" +
+                            "• Reference ID: %s\n" +
+                            "• Partner: %s\n" +
+                            "• Verification Date: %s\n\n" +
+                            "Your agent account is now active and ready to use. You can start processing transactions immediately.\n\n"
+                            +
+                            "If you have any questions, please contact our support team.\n\n" +
+                            "Best regards,\n" +
+                            "OBUS Partners Team",
+                    agentName,
+                    agent.getBusinessName(),
+                    response.getAgentName(),
+                    response.getAgentMSISDN(),
+                    response.getAgentCODE(),
+                    response.getReferenceID(),
+                    partner.getBusinessName(),
+                    java.time.LocalDateTime.now().toString());
+
+            emailNotificationEventProducer.sendCustomEmailNotification(
+                    agent.getBusinessEmail(),
+                    agentName,
+                    emailSubject,
+                    emailBody,
+                    "AGENT_VERIFICATION_SUCCESS");
+
+            log.info("MIXX verification success email notification sent to agent: {} at {}",
+                    agent.getUid(), agent.getBusinessEmail());
+        } else {
+            log.warn("No email address available for agent: {}", agent.getUid());
+        }
+
+        // Log the notification details
         String notificationMessage = String.format(
-            "MIXX Verification Successful:\n" +
-            "Agent: %s (%s)\n" +
-            "Agent Name: %s\n" +
-            "MSISDN: %s\n" +
-            "Code: %s\n" +
-            "Reference: %s\n" +
-            "Partner: %s",
-            agent.getBusinessName(),
-            agent.getUid(),
-            response.getAgentName(),
-            response.getAgentMSISDN(),
-            response.getAgentCODE(),
-            response.getReferenceID(),
-            partner.getBusinessName()
-        );
-        
+                "MIXX Verification Successful:\n" +
+                        "Agent: %s (%s)\n" +
+                        "Agent Name: %s\n" +
+                        "MSISDN: %s\n" +
+                        "Code: %s\n" +
+                        "Reference: %s\n" +
+                        "Partner: %s",
+                agent.getBusinessName(),
+                agent.getUid(),
+                response.getAgentName(),
+                response.getAgentMSISDN(),
+                response.getAgentCODE(),
+                response.getReferenceID(),
+                partner.getBusinessName());
+
         log.info("MIXX verification success notification: {}", notificationMessage);
     }
 
     /**
      * Send MIXX verification failure notification
      */
-    private void sendMixxVerificationFailureNotification(Agent agent, Partner partner, MixxAccountInfoResponse response) {
+    private void sendMixxVerificationFailureNotification(Agent agent, Partner partner,
+            MixxAccountInfoResponse response) {
         log.info("Sending MIXX verification failure notification for agent: {}", agent.getUid());
-        
+
+        String failureReason = response.getMessage() != null ? response.getMessage() : "Unknown error";
+
+        // Send email notification to agent
+        if (agent.getBusinessEmail() != null && !agent.getBusinessEmail().trim().isEmpty()) {
+            String agentName = agent.getContactPerson() != null ? agent.getContactPerson() : agent.getBusinessName();
+            String emailSubject = "Agent Verification Failed - " + agent.getBusinessName();
+            String emailBody = String.format(
+                    "Dear %s,\n\n" +
+                            "Unfortunately, your agent verification could not be completed at this time.\n\n" +
+                            "Verification Details:\n" +
+                            "• Business Name: %s\n" +
+                            "• MSISDN: %s\n" +
+                            "• Agent Code: %s\n" +
+                            "• Reference ID: %s\n" +
+                            "• Partner: %s\n" +
+                            "• Verification Date: %s\n" +
+                            "• Failure Reason: %s\n" +
+                            "• Result Code: %d\n\n" +
+                            "Please review your information and contact our support team for assistance.\n\n" +
+                            "You may need to:\n" +
+                            "• Verify your agent code with your partner\n" +
+                            "• Ensure your MSISDN is correct\n" +
+                            "• Contact your partner for verification status\n\n" +
+                            "Best regards,\n" +
+                            "OBUS Partners Team",
+                    agentName,
+                    agent.getBusinessName(),
+                    response.getAgentMSISDN(),
+                    response.getAgentCODE(),
+                    response.getReferenceID(),
+                    partner.getBusinessName(),
+                    java.time.LocalDateTime.now().toString(),
+                    failureReason,
+                    response.getResult());
+
+            emailNotificationEventProducer.sendCustomEmailNotification(
+                    agent.getBusinessEmail(),
+                    agentName,
+                    emailSubject,
+                    emailBody,
+                    "AGENT_VERIFICATION_FAILURE");
+
+            log.info("MIXX verification failure email notification sent to agent: {} at {}",
+                    agent.getUid(), agent.getBusinessEmail());
+        } else {
+            log.warn("No email address available for agent: {}", agent.getUid());
+        }
+
+        // Log the notification details
         String notificationMessage = String.format(
-            "MIXX Verification Failed:\n" +
-            "Agent: %s (%s)\n" +
-            "MSISDN: %s\n" +
-            "Code: %s\n" +
-            "Reference: %s\n" +
-            "Result Code: %d\n" +
-            "Message: %s\n" +
-            "Partner: %s",
-            agent.getBusinessName(),
-            agent.getUid(),
-            response.getAgentMSISDN(),
-            response.getAgentCODE(),
-            response.getReferenceID(),
-            response.getResult(),
-            response.getMessage(),
-            partner.getBusinessName()
-        );
-        
+                "MIXX Verification Failed:\n" +
+                        "Agent: %s (%s)\n" +
+                        "MSISDN: %s\n" +
+                        "Code: %s\n" +
+                        "Reference: %s\n" +
+                        "Result Code: %d\n" +
+                        "Message: %s\n" +
+                        "Partner: %s",
+                agent.getBusinessName(),
+                agent.getUid(),
+                response.getAgentMSISDN(),
+                response.getAgentCODE(),
+                response.getReferenceID(),
+                response.getResult(),
+                response.getMessage(),
+                partner.getBusinessName());
+
         log.info("MIXX verification failure notification: {}", notificationMessage);
     }
 
@@ -386,10 +488,10 @@ public class AgentVerificationEventConsumer {
     public static class MixxAccountInfoRequest {
         @JsonProperty("AgentMSISDN")
         private String agentMSISDN;
-        
+
         @JsonProperty("AgentCODE")
         private String agentCODE;
-        
+
         @JsonProperty("ReferenceID")
         private String referenceID;
     }
@@ -401,26 +503,26 @@ public class AgentVerificationEventConsumer {
     public static class MixxAccountInfoResponse {
         @JsonProperty("Result")
         private Integer result;
-        
+
         @JsonProperty("Message")
         private String message;
-        
+
         @JsonProperty("AgentName")
         private String agentName;
-        
+
         @JsonProperty("AgentMSISDN")
         private String agentMSISDN;
-        
+
         @JsonProperty("AgentCODE")
         private String agentCODE;
-        
+
         @JsonProperty("ReferenceID")
         private String referenceID;
-        
+
         // For error responses
         @JsonProperty("resultCode")
         private Integer resultCode;
-        
+
         @JsonProperty("resultDesc")
         private String resultDesc;
     }

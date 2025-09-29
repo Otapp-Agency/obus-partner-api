@@ -21,7 +21,7 @@ import com.obuspartners.modules.agent_management.domain.entity.Agent;
 import com.obuspartners.modules.agent_management.domain.entity.PartnerAgentVerification;
 import com.obuspartners.modules.agent_management.domain.enums.AgentStatus;
 import com.obuspartners.modules.agent_management.domain.enums.AgentType;
-import com.obuspartners.modules.agent_management.domain.enums.VerificationStatus;
+import com.obuspartners.modules.agent_management.domain.enums.AgentVerificationStatus;
 import com.obuspartners.modules.agent_management.domain.event.PartnerAgentVerificationRequestedEvent;
 import com.obuspartners.modules.agent_management.repository.AgentRepository;
 import com.obuspartners.modules.agent_management.repository.PartnerAgentVerificationRepository;
@@ -937,7 +937,7 @@ public class AgentServiceImpl implements AgentService {
         verification.setPartner(partner);
         verification.setAgent(agent);
         // requestReferenceNumber will be auto-generated as ULID in @PrePersist
-        verification.setVerificationStatus(VerificationStatus.PENDING);
+        verification.setAgentVerificationStatus(AgentVerificationStatus.PENDING);
         verification.setVerificationType("DOCUMENT_VERIFICATION");
         verification.setRequestedBy("SYSTEM"); // Could be passed as parameter
         verification.setPriority("NORMAL");

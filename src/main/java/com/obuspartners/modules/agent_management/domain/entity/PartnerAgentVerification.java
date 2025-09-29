@@ -8,7 +8,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import de.huxhorn.sulky.ulid.ULID;
-import com.obuspartners.modules.agent_management.domain.enums.VerificationStatus;
+import com.obuspartners.modules.agent_management.domain.enums.AgentVerificationStatus;
+import com.obuspartners.modules.agent_management.service.AgentVerificationService.VerificationStatus;
 import com.obuspartners.modules.partner_management.domain.entity.Partner;
 
 import java.time.LocalDateTime;
@@ -56,9 +57,9 @@ public class PartnerAgentVerification {
     private String requestReferenceNumber;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "verification_status", nullable = false)
-    @NotNull(message = "Verification status is required")
-    private VerificationStatus verificationStatus = VerificationStatus.PENDING;
+    @Column(name = "agent_verification_status", nullable = false)
+    @NotNull(message = "Agent Verification status is required")
+    private AgentVerificationStatus agentVerificationStatus = AgentVerificationStatus.PENDING;
 
     @Column(name = "verification_type", length = 50)
     @Size(max = 50, message = "Verification type must not exceed 50 characters")
@@ -105,15 +106,15 @@ public class PartnerAgentVerification {
 
     // Business methods
     public boolean isPending() {
-        return verificationStatus == VerificationStatus.PENDING;
+        return agentVerificationStatus == AgentVerificationStatus.PENDING;
     }
 
     public boolean isApproved() {
-        return verificationStatus == VerificationStatus.APPROVED;
+        return agentVerificationStatus == AgentVerificationStatus.APPROVED;
     }
 
     public boolean isRejected() {
-        return verificationStatus == VerificationStatus.REJECTED;
+        return agentVerificationStatus == AgentVerificationStatus.REJECTED;
     }
 
     public boolean isExpired() {
@@ -121,7 +122,7 @@ public class PartnerAgentVerification {
     }
 
     public void approve(String verifiedBy, String verificationNotes) {
-        this.verificationStatus = VerificationStatus.APPROVED;
+        this.agentVerificationStatus = AgentVerificationStatus.APPROVED;
         this.verifiedBy = verifiedBy;
         this.verifiedAt = LocalDateTime.now();
         this.verificationNotes = verificationNotes;
@@ -129,7 +130,7 @@ public class PartnerAgentVerification {
     }
 
     public void reject(String verifiedBy, String rejectionReason) {
-        this.verificationStatus = VerificationStatus.REJECTED;
+        this.agentVerificationStatus = AgentVerificationStatus.REJECTED;
         this.verifiedBy = verifiedBy;
         this.verifiedAt = LocalDateTime.now();
         this.rejectionReason = rejectionReason;
@@ -137,7 +138,7 @@ public class PartnerAgentVerification {
     }
 
     public void cancel(String cancelledBy) {
-        this.verificationStatus = VerificationStatus.CANCELLED;
+        this.agentVerificationStatus = AgentVerificationStatus.CANCELLED;
         this.verifiedBy = cancelledBy;
         this.verifiedAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();

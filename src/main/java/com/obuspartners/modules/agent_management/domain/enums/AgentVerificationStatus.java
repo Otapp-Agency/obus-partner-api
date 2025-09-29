@@ -6,7 +6,7 @@ package com.obuspartners.modules.agent_management.domain.enums;
  * @author OBUS Team
  * @version 1.0.0
  */
-public enum VerificationStatus {
+public enum AgentVerificationStatus {
     
     /**
      * Verification request is pending review
@@ -38,7 +38,7 @@ public enum VerificationStatus {
     private final String description;
     private final String colorCode;
 
-    VerificationStatus(String name, String displayName, String description, String colorCode) {
+    AgentVerificationStatus(String name, String displayName, String description, String colorCode) {
         this.name = name;
         this.displayName = displayName;
         this.description = description;
