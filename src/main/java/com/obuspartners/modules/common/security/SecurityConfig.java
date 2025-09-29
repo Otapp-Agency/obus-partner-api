@@ -58,6 +58,7 @@ public class SecurityConfig {
                 .requestMatchers("/v1/auth/login", "/v1/auth/register", "/v1/auth/refresh", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                 .requestMatchers("/v1/auth/agent/login").permitAll()
                 .requestMatchers("/v1/partners/public/**").permitAll()
+                .requestMatchers("/demo/kafka/**").permitAll() // Allow demo Kafka endpoints without authentication
                 .requestMatchers("/partner/**").authenticated() // Just require authentication, no specific role
                 .requestMatchers("/api/agent/**").hasRole("AGENT")
                 .anyRequest().authenticated()

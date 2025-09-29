@@ -1,0 +1,44 @@
+# Staging Profile Configuration
+# This profile is optimized for staging environment with production-like settings
+
+spring:
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:staging-kafka-cluster:9092}
+    consumer:
+      group-id: obus-partner-api-staging-group
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      session-timeout-ms: 30000
+      heartbeat-interval-ms: 10000
+      max-poll-records: 500
+      max-poll-interval-ms: 300000
+    producer:
+      acks: all
+      retries: 3
+      batch-size: 16384
+      linger-ms: 5
+      buffer-memory: 33554432
+      enable-idempotence: true
+      max-in-flight-requests-per-connection: 1
+    listener:
+      ack-mode: manual_immediate
+      concurrency: 3
+      missing-topics-fatal: false
+    admin:
+      auto-create: true
+
+# Logging Configuration for Staging
+logging:
+  level:
+    com.obus.partner: INFO
+    org.springframework.web: INFO
+    org.apache.kafka: WARN
+    org.springframework.kafka: INFO
+    org.hibernate.SQL: WARN
+
+# Staging-specific configurations
+kafka:
+  topics:
+    retention-ms: 604800000  # 7 days
+    partitions: 3
+    replicas: 2
