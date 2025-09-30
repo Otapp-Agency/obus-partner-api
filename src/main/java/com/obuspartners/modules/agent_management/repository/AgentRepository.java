@@ -51,21 +51,21 @@ public interface AgentRepository extends JpaRepository<Agent, Long> {
     Optional<Agent> findByPartnerAndPartnerAgentNumber(Partner partner, String partnerAgentNumber);
 
     /**
-     * Find agent by login username
+     * Find agent by pass name
      * 
-     * @param loginUsername the login username
+     * @param passName the pass name
      * @return Optional containing the agent if found
      */
-    Optional<Agent> findByLoginUsername(String loginUsername);
+    Optional<Agent> findByPassName(String passName);
 
     /**
-     * Find agent by login username and password
+     * Find agent by pass name and pass code
      * 
-     * @param loginUsername the login username
-     * @param loginPassword the login password
+     * @param passName the pass name
+     * @param passCode the pass code
      * @return Optional containing the agent if found
      */
-    Optional<Agent> findByLoginUsernameAndLoginPassword(String loginUsername, String loginPassword);
+    Optional<Agent> findByPassNameAndPassCode(String passName, String passCode);
 
     /**
      * Find agent by business email
@@ -134,12 +134,12 @@ public interface AgentRepository extends JpaRepository<Agent, Long> {
     boolean existsByPartnerAndPartnerAgentNumber(Partner partner, String partnerAgentNumber);
 
     /**
-     * Check if login username exists
+     * Check if pass name exists
      * 
-     * @param loginUsername the login username
-     * @return true if login username exists, false otherwise
+     * @param passName the pass name
+     * @return true if pass name exists, false otherwise
      */
-    boolean existsByLoginUsername(String loginUsername);
+    boolean existsByPassName(String passName);
 
     /**
      * Check if business email exists

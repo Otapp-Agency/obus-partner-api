@@ -26,7 +26,7 @@ public class AgentSummaryDto {
     private String uid;
     private String code;
     private String partnerAgentNumber;
-    private String loginUsername;
+    private String passName;
     private String businessName;
     private String contactPerson;
     private AgentType agentType;

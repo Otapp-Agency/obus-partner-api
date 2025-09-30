@@ -2,6 +2,7 @@ package com.obuspartners.modules.agent_management.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,6 +43,7 @@ public class AgentAuthenticationServiceImpl implements AgentAuthenticationServic
     private final JwtUtil jwtUtil;
     private final PartnerApiKeyService partnerApiKeyService;
     private final PartnerRepository partnerRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     @Transactional
@@ -81,7 +83,7 @@ public class AgentAuthenticationServiceImpl implements AgentAuthenticationServic
         log.info("Constructed full username: {}", fullUsername);
 
         // Find agent by full username
-        Optional<Agent> agentOpt = agentRepository.findByLoginUsername(fullUsername);
+        Optional<Agent> agentOpt = agentRepository.findByPassName(fullUsername);
 
         if (agentOpt.isEmpty()) {
             log.warn("Authentication failed for agent number: {} with partner: {}", loginRequest.getAgentNumber(), partner.getCode());
@@ -96,13 +98,13 @@ public class AgentAuthenticationServiceImpl implements AgentAuthenticationServic
         }
 
         // Verify password
-        if (!agent.getLoginPassword().equals(loginRequest.getLoginPassword())) {
+        if (!passwordEncoder.matches(loginRequest.getPassCode(), agent.getPassCode())) {
             throw new ApiException("Invalid login credentials", HttpStatus.UNAUTHORIZED);
         }
 
         // Check if agent is active
         if (agent.getStatus() != AgentStatus.ACTIVE) {
-            log.warn("Agent {} is not active, status: {}", agent.getLoginUsername(), agent.getStatus());
+            log.warn("Agent {} is not active, status: {}", agent.getPassName(), agent.getStatus());
             //throw new ApiException("Agent account is not active", HttpStatus.FORBIDDEN);
         }
 
@@ -114,13 +116,15 @@ public class AgentAuthenticationServiceImpl implements AgentAuthenticationServic
         String accessToken = generateAgentAccessToken(agent);
         String refreshToken = generateAgentRefreshToken(agent);
 
-        log.info("Agent {} authenticated successfully", agent.getLoginUsername());
+        log.info("Agent {} authenticated successfully", agent.getPassName());
 
         return AgentLoginResponseDto.builder()
             .accessToken(accessToken)
             .refreshToken(refreshToken)
             .type("Bearer")
-            .username(agent.getLoginUsername())
+            .passName(agent.getPassName())
+            .partnerAgentNumber(agent.getPartnerAgentNumber())
+            .partnerCode(agent.getPartner().getCode())
             .email(agent.getBusinessEmail())
             .role("AGENT")
             .build();
@@ -133,7 +137,7 @@ public class AgentAuthenticationServiceImpl implements AgentAuthenticationServic
             String username = jwtUtil.getUsernameFromToken(token);
             
             // Find agent by username
-            Optional<Agent> agentOpt = agentRepository.findByLoginUsername(username);
+            Optional<Agent> agentOpt = agentRepository.findByPassName(username);
             
             if (agentOpt.isEmpty()) {
                 return false;
@@ -160,7 +164,7 @@ public class AgentAuthenticationServiceImpl implements AgentAuthenticationServic
             String username = jwtUtil.getUsernameFromToken(token);
             
             // Find agent by username
-            Optional<Agent> agentOpt = agentRepository.findByLoginUsername(username);
+            Optional<Agent> agentOpt = agentRepository.findByPassName(username);
             
             if (agentOpt.isPresent() && agentOpt.get().getStatus() == AgentStatus.ACTIVE) {
                 return mapToAgentResponseDto(agentOpt.get());
@@ -213,12 +217,12 @@ public class AgentAuthenticationServiceImpl implements AgentAuthenticationServic
 
         @Override
         public String getPassword() {
-            return agent.getLoginPassword();
+            return agent.getPassCode();
         }
 
         @Override
         public String getUsername() {
-            return agent.getLoginUsername();
+            return agent.getPassName();
         }
 
         @Override
@@ -254,7 +258,7 @@ public class AgentAuthenticationServiceImpl implements AgentAuthenticationServic
         dto.setUid(agent.getUid());
         dto.setCode(agent.getCode());
         dto.setPartnerAgentNumber(agent.getPartnerAgentNumber());
-        dto.setLoginUsername(agent.getLoginUsername());
+        dto.setPassName(agent.getPassName());
         dto.setBusinessName(agent.getBusinessName());
         dto.setContactPerson(agent.getContactPerson());
         dto.setPhoneNumber(agent.getPhoneNumber());

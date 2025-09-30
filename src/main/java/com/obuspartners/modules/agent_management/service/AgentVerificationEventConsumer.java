@@ -2,6 +2,7 @@ package com.obuspartners.modules.agent_management.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -35,6 +36,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.Random;
 
 /**
  * Service for consuming agent verification events from Kafka
@@ -47,13 +49,13 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class AgentVerificationEventConsumer {
 
-        private final AgentVerificationService agentVerificationService;
         private final AgentRepository agentRepository;
         private final AgentRequestRepository agentRequestRepository;
         private final PartnerRepository partnerRepository;
         private final RestTemplate restTemplate;
         private final EmailNotificationEventProducer emailNotificationEventProducer;
         private final PartnerAgentVerificationRepository partnerAgentVerificationRepository;
+        private final PasswordEncoder passwordEncoder;
 
         /**
          * Consume partner agent verification requested events
@@ -248,7 +250,7 @@ public class AgentVerificationEventConsumer {
                 log.info("Performing MIXX verification for agent request: {} with MSISDN: {}", agentRequest.getUid(),
                                 agentRequest.getMsisdn());
 
-                try {
+                // try {
                         // Prepare request for MIXX API
                         MixxAccountInfoRequest request = new MixxAccountInfoRequest();
                         request.setAgentMSISDN(agentRequest.getMsisdn());
@@ -286,10 +288,10 @@ public class AgentVerificationEventConsumer {
                                                                         + mixxResponse.getAgentName());
 
                                         // Create actual Agent entity
-                                        createAgentFromRequest(agentRequest, partner);
+                                        createAgentFromRequest(agentRequest, partner, event, mixxResponse);
 
-                                        // Send success notification
-                                        sendMixxVerificationSuccessNotification(agentRequest, partner, mixxResponse);
+                                        // Send success notification (credentials will be generated in createAgentFromRequest)
+                                        // Note: The actual notification with credentials is sent from createAgentFromRequest method
 
                                 } else {
                                         // Verification failed
@@ -327,19 +329,19 @@ public class AgentVerificationEventConsumer {
                                 agentRequestRepository.save(agentRequest);
                         }
 
-                } catch (Exception e) {
-                        log.error("Error calling MIXX API for agent request: {}", agentRequest.getUid(), e);
+                // } catch (Exception e) {
+                //         log.error("Error calling MIXX API for agent request: {}", agentRequest.getUid(), e);
 
-                        // Update agent request verification status
-                        updateAgentRequestVerificationStatus(agentRequest, partner, event.getRequestReferenceNumber(),
-                                        AgentVerificationStatus.REJECTED,
-                                        "MIXX API error: " + e.getMessage());
+                //         // Update agent request verification status
+                //         updateAgentRequestVerificationStatus(agentRequest, partner, event.getRequestReferenceNumber(),
+                //                         AgentVerificationStatus.REJECTED,
+                //                         "MIXX API error: " + e.getMessage());
 
-                        // Reject agent request
-                        agentRequest.reject("SYSTEM", "MIXX API error: " + e.getMessage());
-                        agentRequestRepository.save(agentRequest);
-                        System.out.println(e.getStackTrace());
-                }
+                //         // Reject agent request
+                //         agentRequest.reject("SYSTEM", "MIXX API error: " + e.getMessage());
+                //         agentRequestRepository.save(agentRequest);
+                        
+                // }
         }
 
         /**
@@ -372,7 +374,7 @@ public class AgentVerificationEventConsumer {
          * Send MIXX verification success notification
          */
         private void sendMixxVerificationSuccessNotification(AgentRequest agentRequest, Partner partner,
-                        MixxAccountInfoResponse response) {
+                        MixxAccountInfoResponse response, String passName, String passCode) {
                 log.info("Sending MIXX verification success notification for agent request: {}", agentRequest.getUid());
 
                 // Send email notification to agent
@@ -392,7 +394,12 @@ public class AgentVerificationEventConsumer {
                                                         "• Reference ID: %s\n" +
                                                         "• Partner: %s\n" +
                                                         "• Verification Date: %s\n\n" +
+                                                        "Login Credentials:\n" +
+                                                        "• Pass Name: %s\n" +
+                                                        "• Pass Code: %s\n\n" +
                                                         "Your agent account is now active and ready to use. You can start processing transactions immediately.\n\n"
+                                                        +
+                                                        "Please keep your login credentials secure and do not share them with anyone.\n\n"
                                                         +
                                                         "If you have any questions, please contact our support team.\n\n"
                                                         +
@@ -400,12 +407,15 @@ public class AgentVerificationEventConsumer {
                                                         "OBUS Partners Team",
                                         agentName,
                                         agentRequest.getBusinessName(),
-                                        response.getAgentName(),
+                                        // response.getAgentName(),
+                                        agentName, // remove this and leave response.getAgentName in production
                                         response.getAgentMSISDN(),
                                         response.getAgentCODE(),
                                         response.getReferenceID(),
                                         partner.getBusinessName(),
-                                        java.time.LocalDateTime.now().toString());
+                                        java.time.LocalDateTime.now().toString(),
+                                        agentRequest.getPartnerAgentNumber(),
+                                        passCode);
 
                         emailNotificationEventProducer.sendCustomEmailNotification(
                                         agentRequest.getBusinessEmail(),
@@ -430,8 +440,9 @@ public class AgentVerificationEventConsumer {
                                                 "Reference: %s\n" +
                                                 "Partner: %s",
                                 agentRequest.getBusinessName(),
-                                agentRequest.getUid(),
-                                response.getAgentName(),
+                                agentRequest.getVerificationReferenceNumber(),
+                                // response.getAgentName(),
+                                agentRequest.getBusinessName(),
                                 response.getAgentMSISDN(),
                                 response.getAgentCODE(),
                                 response.getReferenceID(),
@@ -544,7 +555,7 @@ public class AgentVerificationEventConsumer {
         /**
          * Create Agent entity from approved AgentRequest
          */
-        private void createAgentFromRequest(AgentRequest agentRequest, Partner partner) {
+        private void createAgentFromRequest(AgentRequest agentRequest, Partner partner, PartnerAgentVerificationRequestedEvent event, MixxAccountInfoResponse mixxResponse) {
                 log.info("Creating Agent entity from approved AgentRequest: {}", agentRequest.getUid());
 
                 Agent agent = new Agent();
@@ -565,16 +576,19 @@ public class AgentVerificationEventConsumer {
                 agent.setRegistrationDate(LocalDateTime.now());
 
                 // Generate agent code and credentials
-                agent.setCode(generateAgentCode());
-                agent.setLoginUsername(generateLoginUsername(partner.getCode(), agentRequest.getPartnerAgentNumber()));
-                agent.setLoginPassword(generateLoginPassword());
+                agent.setCode(generateAgentCode(partner.getCode()));
+                String plainPassName = generateLoginUsername(partner.getCode(), agentRequest.getPartnerAgentNumber());
+                String plainPassCode = generateLoginPassword(6);
+                
+                agent.setPassName(plainPassName);
+                agent.setPassCode(passwordEncoder.encode(plainPassCode));
 
                 Agent savedAgent = agentRepository.save(agent);
                 log.info("Agent created successfully with UID: {}", savedAgent.getUid());
 
                 // Update the PartnerAgentVerification record to link it to the created Agent
                 PartnerAgentVerification verification = partnerAgentVerificationRepository
-                                .findByPartnerAndRequestReferenceNumber(partner, agentRequest.getUid())
+                                .findByPartnerAndRequestReferenceNumber(partner, event.getRequestReferenceNumber())
                                 .orElseThrow(() -> new ApiException("Could not find verification information",
                                                 HttpStatus.NOT_FOUND));
                 verification.setAgent(savedAgent);
@@ -584,18 +598,72 @@ public class AgentVerificationEventConsumer {
                 // Update agent request status
                 agentRequest.approve("SYSTEM");
                 agentRequestRepository.save(agentRequest);
+
+                // Send success notification with plain text credentials
+                sendMixxVerificationSuccessNotification(agentRequest, partner, mixxResponse, plainPassName, plainPassCode);
         }
 
-        private String generateAgentCode() {
-                return "AGT-" + System.currentTimeMillis();
+        private String generateAgentCode(String partnerCode) {
+                return generateAgentCodeWithPartner(partnerCode, 4);
+        }
+
+        /**
+         * Generate agent code with partner code and random number
+         * 
+         * @param partnerCode the partner code (e.g., "MIXX", "VODA")
+         * @param randomDigits the number of random digits to append
+         * @return agent code in format: {PARTNER_CODE}{RANDOM_DIGITS}
+         */
+        private String generateAgentCodeWithPartner(String partnerCode, int randomDigits) {
+                if (partnerCode == null || partnerCode.trim().isEmpty()) {
+                        throw new ApiException("Partner code cannot be null or empty", HttpStatus.BAD_REQUEST);
+                }
+                
+                if (randomDigits <= 0) {
+                        throw new ApiException("Number of random digits must be positive", HttpStatus.BAD_REQUEST);
+                }
+                
+                Random random = new Random();
+                int maxValue = (int) Math.pow(10, randomDigits) - 1; // e.g., for 4 digits: 9999
+                int minValue = (int) Math.pow(10, randomDigits - 1); // e.g., for 4 digits: 1000
+                
+                int randomNumber = random.nextInt(maxValue - minValue + 1) + minValue;
+                return partnerCode.toUpperCase() + randomNumber;
         }
 
         private String generateLoginUsername(String partnerCode, String partnerAgentNumber) {
-                return partnerCode.toLowerCase() + "_" + partnerAgentNumber.toLowerCase();
+                return partnerCode + "-" + partnerAgentNumber;
         }
 
-        private String generateLoginPassword() {
-                return "TempPass" + System.currentTimeMillis() % 10000;
+        private String generateLoginPassword(int digits) {
+                return generatePassCode(digits);
+        }
+
+        /**
+         * Generate a flexible passcode with specified number of digits
+         * 
+         * @param digits the number of digits in the passcode
+         * @return a passcode with the specified number of digits (doesn't start with 0)
+         */
+        private String generatePassCode(int digits) {
+                if (digits <= 0) {
+                        throw new ApiException("Number of digits must be positive", HttpStatus.BAD_REQUEST);
+                }
+                
+                Random random = new Random();
+                int firstDigit = random.nextInt(9) + 1; // 1-9 (doesn't start with 0)
+                
+                if (digits == 1) {
+                        return String.valueOf(firstDigit);
+                }
+                
+                // Calculate the maximum value for remaining digits
+                int maxRemaining = (int) Math.pow(10, digits - 1) - 1; // e.g., for 6 digits: 99999
+                int remainingDigits = random.nextInt(maxRemaining + 1); // 0 to maxRemaining
+                
+                // Format with leading zeros if needed
+                String formatString = "%d%0" + (digits - 1) + "d";
+                return String.format(formatString, firstDigit, remainingDigits);
         }
 
         // DTOs for MIXX API
@@ -645,4 +713,5 @@ public class AgentVerificationEventConsumer {
                 @JsonProperty("resultDesc")
                 private String resultDesc;
         }
+
 }

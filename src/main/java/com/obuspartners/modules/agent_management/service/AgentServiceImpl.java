@@ -2,6 +2,7 @@ package com.obuspartners.modules.agent_management.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -13,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Random;
 import java.util.stream.Collectors;
 
 import com.obuspartners.modules.common.exception.ApiException;
@@ -44,6 +46,7 @@ public class AgentServiceImpl implements AgentService {
     private final EmailService emailService;
     private final EventProducerService eventProducerService;
     private final AgentRequestService agentRequestService;
+    private final PasswordEncoder passwordEncoder;
 
     // CRUD Operations
 
@@ -63,10 +66,11 @@ public class AgentServiceImpl implements AgentService {
         return AgentResponseDto.builder()
                 .uid(agentRequestResponse.getUid()) // Use AgentRequest UID for now
                 .partnerId(agentRequestResponse.getPartnerId())
-                .partnerUid(agentRequestResponse.getPartnerCode()) // Use partnerCode as UID for now
+                .partnerUid(null) // Partner UID not available for agent requests
+                .partnerCode(agentRequestResponse.getPartnerCode())
                 .partnerBusinessName(agentRequestResponse.getPartnerBusinessName())
                 .superAgentId(agentRequestResponse.getSuperAgentId())
-                .superAgentUid(agentRequestResponse.getSuperAgentCode()) // Use superAgentCode as UID for now
+                .superAgentCode(agentRequestResponse.getSuperAgentCode())
                 .partnerAgentNumber(agentRequestResponse.getPartnerAgentNumber())
                 .businessName(agentRequestResponse.getBusinessName())
                 .contactPerson(agentRequestResponse.getContactPerson())
@@ -81,8 +85,8 @@ public class AgentServiceImpl implements AgentService {
                 .status(AgentStatus.PENDING_APPROVAL) // Indicate it's pending approval
                 .registrationDate(agentRequestResponse.getRequestedAt())
                 .code(null) // Will be generated after verification
-                .loginUsername(null) // Will be generated after verification
-                .loginPassword(null) // Will be generated after verification
+                .passName(null) // Will be generated after verification
+                .passCode(null) // Will be generated after verification
                 .createdAt(agentRequestResponse.getCreatedAt())
                 .updatedAt(agentRequestResponse.getUpdatedAt())
                 .build();
@@ -601,10 +605,8 @@ public class AgentServiceImpl implements AgentService {
         Partner partner = partnerRepository.findByUid(partnerUid)
                 .orElseThrow(() -> new ApiException("Partner not found with UID: " + partnerUid, HttpStatus.NOT_FOUND));
 
-        // Generate agent code based on partner code + sequence
-        String baseCode = partner.getCode() + "-AGT-";
-        long agentCount = agentRepository.countByPartner(partner);
-        return baseCode + String.format("%04d", agentCount + 1);
+        // Generate agent code with partner code + random 4-digit number
+        return generateAgentCodeWithPartner(partner.getCode(), 4);
     }
 
     @Override
@@ -788,8 +790,8 @@ public class AgentServiceImpl implements AgentService {
         dto.setUid(agent.getUid());
         dto.setCode(agent.getCode());
         dto.setPartnerAgentNumber(agent.getPartnerAgentNumber());
-        dto.setLoginUsername(agent.getLoginUsername());
-        dto.setLoginPassword(agent.getLoginPassword());
+        dto.setPassName(agent.getPassName());
+        dto.setPassCode(agent.getPassCode());
         dto.setBusinessName(agent.getBusinessName());
         dto.setContactPerson(agent.getContactPerson());
         dto.setPhoneNumber(agent.getPhoneNumber());
@@ -838,7 +840,7 @@ public class AgentServiceImpl implements AgentService {
         dto.setUid(agent.getUid());
         dto.setCode(agent.getCode());
         dto.setPartnerAgentNumber(agent.getPartnerAgentNumber());
-        dto.setLoginUsername(agent.getLoginUsername());
+        dto.setPassName(agent.getPassName());
         dto.setBusinessName(agent.getBusinessName());
         dto.setContactPerson(agent.getContactPerson());
         dto.setAgentType(agent.getAgentType());
@@ -863,13 +865,27 @@ public class AgentServiceImpl implements AgentService {
     }
     
     /**
-     * Generate a unique agent code
+     * Generate agent code with partner code and random number
      * 
-     * @return unique agent code
+     * @param partnerCode the partner code (e.g., "MIXX", "VODA")
+     * @param randomDigits the number of random digits to append
+     * @return agent code in format: {PARTNER_CODE}{RANDOM_DIGITS}
      */
-    private String generateAgentCode() {
-        return "AGT-" + System.currentTimeMillis() + "-" + 
-               java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+    private String generateAgentCodeWithPartner(String partnerCode, int randomDigits) {
+        if (partnerCode == null || partnerCode.trim().isEmpty()) {
+            throw new ApiException("Partner code cannot be null or empty", HttpStatus.BAD_REQUEST);
+        }
+        
+        if (randomDigits <= 0) {
+            throw new ApiException("Number of random digits must be positive", HttpStatus.BAD_REQUEST);
+        }
+        
+        Random random = new Random();
+        int maxValue = (int) Math.pow(10, randomDigits) - 1; // e.g., for 4 digits: 9999
+        int minValue = (int) Math.pow(10, randomDigits - 1); // e.g., for 4 digits: 1000
+        
+        int randomNumber = random.nextInt(maxValue - minValue + 1) + minValue;
+        return partnerCode.toUpperCase() + randomNumber;
     }
     
     /**
@@ -884,21 +900,40 @@ public class AgentServiceImpl implements AgentService {
     }
     
     /**
-     * Generate login password for agent
+     * Generate login password for agent with specified number of digits
      * 
+     * @param digits the number of digits in the passcode
      * @return generated password
      */
-    private String generateLoginPassword() {
-        // Generate a random 8-character password
-        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-        StringBuilder password = new StringBuilder();
-        java.util.Random random = new java.util.Random();
-        
-        for (int i = 0; i < 8; i++) {
-            password.append(chars.charAt(random.nextInt(chars.length())));
+    private String generateLoginPassword(int digits) {
+        return generatePassCode(digits);
+    }
+
+    /**
+     * Generate a flexible passcode with specified number of digits
+     * 
+     * @param digits the number of digits in the passcode
+     * @return a passcode with the specified number of digits (doesn't start with 0)
+     */
+    private String generatePassCode(int digits) {
+        if (digits <= 0) {
+            throw new ApiException("Number of digits must be positive", HttpStatus.BAD_REQUEST);
         }
         
-        return password.toString();
+        Random random = new Random();
+        int firstDigit = random.nextInt(9) + 1; // 1-9 (doesn't start with 0)
+        
+        if (digits == 1) {
+            return String.valueOf(firstDigit);
+        }
+        
+        // Calculate the maximum value for remaining digits
+        int maxRemaining = (int) Math.pow(10, digits - 1) - 1; // e.g., for 6 digits: 99999
+        int remainingDigits = random.nextInt(maxRemaining + 1); // 0 to maxRemaining
+        
+        // Format with leading zeros if needed
+        String formatString = "%d%0" + (digits - 1) + "d";
+        return String.format(formatString, firstDigit, remainingDigits);
     }
 
     /**
@@ -906,26 +941,25 @@ public class AgentServiceImpl implements AgentService {
      * 
      * @param agent the agent entity
      */
-    private void sendAgentCredentialsEmail(Agent agent) {
+    private void sendAgentCredentialsEmail(Agent agent, String plainPassCode) {
         try {
             String subject = "Welcome to OTAPP PARTNERS – Your Agent Account Credentials";
             String message = String.format(
                 "Hello %s,\n\n" +
                 "Your OTAPP PARTNERS agent account has been successfully created.\n\n" + 
                 "Here are your login credentials:\n" +
-                "- Agent Number: %s\n" +
-                "- Login Password: %s\n\n" +
+                "- Pass Name: %s\n" +
+                "- Pass Code: %s\n\n" +
                 "Please keep these credentials secure and do not share them with anyone.\n\n" +
                 "Login Instructions:\n" +
-                "1. Use your agent number (%s) and password to login\n" +
-                "2. The system will automatically create your username\n" +
-                "3. Contact your partner for login assistance if needed\n\n" +
+                "1. Use your Pass Name (%s) and Pass Code to login\n" +
+                "2. Contact your partner for login assistance if needed\n\n" +
                 "If you did not request this account, please contact our support team.\n\n" +
                 "Regards,\nOTAPP Support Team",
                 agent.getContactPerson(),
-                agent.getPartnerAgentNumber(),
-                agent.getLoginPassword(),
-                agent.getPartnerAgentNumber()
+                agent.getPassName(),
+                plainPassCode,
+                agent.getPassName()
             );
 
             emailService.sendEmail(agent.getBusinessEmail(), subject, message);

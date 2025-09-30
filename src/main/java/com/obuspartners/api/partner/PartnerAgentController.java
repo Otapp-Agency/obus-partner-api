@@ -35,15 +35,15 @@ public class PartnerAgentController {
     private final AgentVerificationService agentVerificationService;
 
     /**
-     * Register a new agent with partner verification
+     * Submit an agent registration request with partner verification
      */
     @PostMapping("/register")
-    @Operation(summary = "Register agent with partner verification")
+    @Operation(summary = "Submit agent registration request with partner verification")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "201", description = "Agent registered successfully"),
+        @ApiResponse(responseCode = "201", description = "Agent registration request submitted successfully"),
         @ApiResponse(responseCode = "400", description = "Invalid request data"),
         @ApiResponse(responseCode = "401", description = "Unauthorized - Invalid API key"),
-        @ApiResponse(responseCode = "409", description = "Agent already exists")
+        @ApiResponse(responseCode = "409", description = "Agent registration request already exists")
     })
     public ResponseEntity<ResponseWrapper<AgentRegistrationResponse>> registerAgent(
             @Valid @RequestBody CreateAgentRequestDto createRequest,
@@ -66,8 +66,8 @@ public class PartnerAgentController {
             response.setUid(agentResponse.getUid());
             response.setAgentCode(agentResponse.getCode());
             response.setPartnerAgentNumber(agentResponse.getPartnerAgentNumber());
-        response.setLoginUsername(agentResponse.getLoginUsername());
-        // Note: loginPassword is sent via email for security reasons
+        response.setPassName(agentResponse.getPassName());
+        // Note: passCode is sent via email for security reasons
             response.setBusinessName(agentResponse.getBusinessName());
             response.setContactPerson(agentResponse.getContactPerson());
             response.setPhoneNumber(agentResponse.getPhoneNumber());
@@ -95,15 +95,15 @@ public class PartnerAgentController {
             response.setUserUsername(agentResponse.getUserUsername());
             response.setUserEmail(agentResponse.getUserEmail());
             response.setVerificationRequestId(verificationRequestId);
-            response.setMessage("Agent registered successfully. Verification request submitted.");
+            response.setMessage("Agent registration request submitted successfully. Verification request created.");
 
             return ResponseEntity.status(HttpStatus.CREATED)
-                .body(new ResponseWrapper<>(true, 201, "Agent registered successfully", response));
+                .body(new ResponseWrapper<>(true, 201, "Agent registration request submitted successfully", response));
 
         } catch (Exception e) {
             log.error("Error registering agent: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new ResponseWrapper<>(false, 400, "Failed to register agent: " + e.getMessage(), null));
+                .body(new ResponseWrapper<>(false, 400, "Failed to submit agent registration request: " + e.getMessage(), null));
         }
     }
 
@@ -115,8 +115,8 @@ public class PartnerAgentController {
         private String uid;
         private String agentCode;
         private String partnerAgentNumber;
-        private String loginUsername;
-        // Note: loginPassword is sent via email for security reasons
+        private String passName;
+        // Note: passCode is sent via email for security reasons
         private String businessName;
         private String contactPerson;
         private String phoneNumber;
@@ -157,9 +157,9 @@ public class PartnerAgentController {
         public void setAgentCode(String agentCode) { this.agentCode = agentCode; }
         public String getPartnerAgentNumber() { return partnerAgentNumber; }
         public void setPartnerAgentNumber(String partnerAgentNumber) { this.partnerAgentNumber = partnerAgentNumber; }
-        public String getLoginUsername() { return loginUsername; }
-        public void setLoginUsername(String loginUsername) { this.loginUsername = loginUsername; }
-        // Note: loginPassword getter/setter removed - sent via email for security
+        public String getPassName() { return passName; }
+        public void setPassName(String passName) { this.passName = passName; }
+        // Note: passCode getter/setter removed - sent via email for security
         public String getBusinessName() { return businessName; }
         public void setBusinessName(String businessName) { this.businessName = businessName; }
         public String getContactPerson() { return contactPerson; }
