@@ -233,12 +233,12 @@ public interface AgentService {
     // Query Operations
 
     /**
-     * Get all agents with pagination
+     * Get all agents with pagination (summary view)
      * 
      * @param pageable pagination information
      * @return Page of agent summaries
      */
-    Page<AgentSummaryDto> getAllAgents(Pageable pageable);
+    Page<AgentSummaryDto> getAllAgentSummaries(Pageable pageable);
 
     /**
      * Get all agents without pagination (for assignment purposes)
@@ -543,4 +543,5 @@ public interface AgentService {
         public long getAgentsByPartner() { return agentsByPartner; }
         public void setAgentsByPartner(long agentsByPartner) { this.agentsByPartner = agentsByPartner; }
     }
+
 }
