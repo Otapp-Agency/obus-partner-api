@@ -21,6 +21,6 @@ public class AgentLoginRequestDto {
     @NotBlank(message = "Agent number is required")
     private String agentNumber;
 
-    @NotBlank(message = "Login password is required")
-    private String loginPassword;
+    @NotBlank(message = "Pass code is required")
+    private String passCode;
 }

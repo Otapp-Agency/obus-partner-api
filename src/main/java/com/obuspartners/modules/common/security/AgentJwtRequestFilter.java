@@ -60,14 +60,14 @@ public class AgentJwtRequestFilter extends OncePerRequestFilter {
                 if (agentResponse != null) {
                     UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken = 
                         new UsernamePasswordAuthenticationToken(
-                            agentResponse.getLoginUsername(), null, Collections.singletonList(new SimpleGrantedAuthority("ROLE_AGENT")));
+                            agentResponse.getPassName(), null, Collections.singletonList(new SimpleGrantedAuthority("ROLE_AGENT")));
                     
                     usernamePasswordAuthenticationToken
                         .setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     
                     SecurityContextHolder.getContext().setAuthentication(usernamePasswordAuthenticationToken);
                     
-                    log.debug("Agent JWT authentication successful for: {}", agentResponse.getLoginUsername());
+                    log.debug("Agent JWT authentication successful for: {}", agentResponse.getPassName());
                 }
             }
         }

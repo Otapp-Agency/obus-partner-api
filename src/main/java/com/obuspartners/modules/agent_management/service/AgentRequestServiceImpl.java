@@ -18,6 +18,7 @@ import com.obuspartners.modules.partner_management.domain.entity.Partner;
 import com.obuspartners.modules.partner_management.repository.PartnerRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -26,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.util.Random;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -49,6 +51,7 @@ public class AgentRequestServiceImpl implements AgentRequestService {
     private final PartnerRepository partnerRepository;
     private final PartnerAgentVerificationRepository verificationRepository;
     private final EventProducerService eventProducerService;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     @Transactional
@@ -331,23 +334,74 @@ public class AgentRequestServiceImpl implements AgentRequestService {
         agent.setRegistrationDate(LocalDateTime.now());
 
         // Generate agent code and credentials
-        agent.setCode(generateAgentCode());
-        agent.setLoginUsername(generateLoginUsername(agentRequest.getPartner().getCode(), agentRequest.getPartnerAgentNumber()));
-        agent.setLoginPassword(generateLoginPassword());
+        agent.setCode(generateAgentCode(agentRequest.getPartner().getCode()));
+        agent.setPassName(generateLoginUsername(agentRequest.getPartner().getCode(), agentRequest.getPartnerAgentNumber()));
+        agent.setPassCode(passwordEncoder.encode(generateLoginPassword(6)));
 
         return agent;
     }
 
-    private String generateAgentCode() {
-        return "AGT-" + System.currentTimeMillis();
+    private String generateAgentCode(String partnerCode) {
+        return generateAgentCodeWithPartner(partnerCode, 4);
+    }
+
+    /**
+     * Generate agent code with partner code and random number
+     * 
+     * @param partnerCode the partner code (e.g., "MIXX", "VODA")
+     * @param randomDigits the number of random digits to append
+     * @return agent code in format: {PARTNER_CODE}{RANDOM_DIGITS}
+     */
+    private String generateAgentCodeWithPartner(String partnerCode, int randomDigits) {
+        if (partnerCode == null || partnerCode.trim().isEmpty()) {
+            throw new ApiException("Partner code cannot be null or empty", HttpStatus.BAD_REQUEST);
+        }
+        
+        if (randomDigits <= 0) {
+            throw new ApiException("Number of random digits must be positive", HttpStatus.BAD_REQUEST);
+        }
+        
+        Random random = new Random();
+        int maxValue = (int) Math.pow(10, randomDigits) - 1; // e.g., for 4 digits: 9999
+        int minValue = (int) Math.pow(10, randomDigits - 1); // e.g., for 4 digits: 1000
+        
+        int randomNumber = random.nextInt(maxValue - minValue + 1) + minValue;
+        return partnerCode.toUpperCase() + randomNumber;
     }
 
     private String generateLoginUsername(String partnerCode, String partnerAgentNumber) {
         return partnerCode.toLowerCase() + "_" + partnerAgentNumber.toLowerCase();
     }
 
-    private String generateLoginPassword() {
-        return "TempPass" + System.currentTimeMillis() % 10000;
+    private String generateLoginPassword(int digits) {
+        return generatePassCode(digits);
+    }
+
+    /**
+     * Generate a flexible passcode with specified number of digits
+     * 
+     * @param digits the number of digits in the passcode
+     * @return a passcode with the specified number of digits (doesn't start with 0)
+     */
+    private String generatePassCode(int digits) {
+        if (digits <= 0) {
+            throw new ApiException("Number of digits must be positive", HttpStatus.BAD_REQUEST);
+        }
+        
+        Random random = new Random();
+        int firstDigit = random.nextInt(9) + 1; // 1-9 (doesn't start with 0)
+        
+        if (digits == 1) {
+            return String.valueOf(firstDigit);
+        }
+        
+        // Calculate the maximum value for remaining digits
+        int maxRemaining = (int) Math.pow(10, digits - 1) - 1; // e.g., for 6 digits: 99999
+        int remainingDigits = random.nextInt(maxRemaining + 1); // 0 to maxRemaining
+        
+        // Format with leading zeros if needed
+        String formatString = "%d%0" + (digits - 1) + "d";
+        return String.format(formatString, firstDigit, remainingDigits);
     }
 
     private AgentRequestResponseDto mapToAgentRequestResponseDto(AgentRequest agentRequest) {

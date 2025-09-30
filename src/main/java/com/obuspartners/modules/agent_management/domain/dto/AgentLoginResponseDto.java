@@ -21,7 +21,9 @@ public class AgentLoginResponseDto {
     private String refreshToken;
     @Builder.Default
     private String type = "Bearer";
-    private String username;
+    private String passName;
+    private String partnerAgentNumber;
+    private String partnerCode;
     private String email;
     private String role;
 }

@@ -67,15 +67,15 @@ public class Agent {
     @Size(max = 50, message = "Partner agent number must not exceed 50 characters")
     private String partnerAgentNumber;
 
-    @Column(name = "login_username", unique = true, nullable = false)
-    @NotBlank(message = "Login username is required")
-    @Size(max = 100, message = "Login username must not exceed 100 characters")
-    private String loginUsername;
+    @Column(name = "pass_name", unique = true, nullable = false)
+    @NotBlank(message = "Pass name is required")
+    @Size(max = 100, message = "Pass name must not exceed 100 characters")
+    private String passName;
 
-    @Column(name = "login_password", nullable = false)
-    @NotBlank(message = "Login password is required")
-    @Size(max = 255, message = "Login password must not exceed 255 characters")
-    private String loginPassword;
+    @Column(name = "pass_code", nullable = false)
+    @NotBlank(message = "Pass code is required")
+    @Size(max = 255, message = "Pass code must not exceed 255 characters")
+    private String passCode;
 
     @Column(name = "business_name")
     @Size(max = 200, message = "Business name must not exceed 200 characters")
