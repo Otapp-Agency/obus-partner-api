@@ -454,7 +454,7 @@ public class AgentServiceImpl implements AgentService {
     // Query Operations
 
     @Override
-    public Page<AgentSummaryDto> getAllAgents(Pageable pageable) {
+    public Page<AgentSummaryDto> getAllAgentSummaries(Pageable pageable) {
         log.debug("Retrieving all agents with pagination");
         return agentRepository.findAll(pageable).map(this::mapToAgentSummaryDto);
     }
@@ -970,4 +970,5 @@ public class AgentServiceImpl implements AgentService {
             // Don't throw exception to avoid failing agent creation if email fails
         }
     }
+
 }

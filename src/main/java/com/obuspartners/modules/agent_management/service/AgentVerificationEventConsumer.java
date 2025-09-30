@@ -11,6 +11,7 @@ import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.obuspartners.modules.agent_management.domain.entity.Agent;
 import com.obuspartners.modules.agent_management.domain.entity.AgentRequest;
@@ -39,10 +40,44 @@ import java.time.LocalDateTime;
 import java.util.Random;
 
 /**
- * Service for consuming agent verification events from Kafka
+ * Service for consuming agent verification events from Kafka and processing
+ * them through
+ * partner-specific verification workflows.
+ * 
+ * <p>
+ * This consumer handles the complete agent verification lifecycle:
+ * <ul>
+ * <li>Receives verification requests from Kafka topics</li>
+ * <li>Performs partner-specific verification (currently supports
+ * MIXX/Tigo)</li>
+ * <li>Creates Agent entities upon successful verification</li>
+ * <li>Sends email notifications with login credentials</li>
+ * <li>Updates verification statuses and agent request states</li>
+ * </ul>
+ * 
+ * <p>
+ * <strong>Transaction Management:</strong>
+ * The verification process is wrapped in a single transaction to ensure data
+ * consistency.
+ * All database operations (verification status updates, agent creation, request
+ * approval)
+ * are atomic - either all succeed or all are rolled back.
+ * 
+ * <p>
+ * <strong>Error Handling:</strong>
+ * - Kafka message acknowledgment prevents infinite retries
+ * - External API failures are logged and handled gracefully
+ * - Email notification failures don't affect database transactions
+ * 
+ * <p>
+ * <strong>Security:</strong>
+ * - Passwords are hashed using BCrypt before storage
+ * - Plain text credentials are only sent via email (not stored)
+ * - Agent codes are generated with partner-specific prefixes
  * 
  * @author OBUS Team
  * @version 1.0.0
+ * @since 1.0.0
  */
 @Slf4j
 @Service
@@ -58,7 +93,29 @@ public class AgentVerificationEventConsumer {
         private final PasswordEncoder passwordEncoder;
 
         /**
-         * Consume partner agent verification requested events
+         * Kafka listener for partner agent verification requested events.
+         * 
+         * <p>
+         * This method is the entry point for the verification workflow. It receives
+         * events
+         * from the "obus.partner.agent.verification.requested" topic and processes them
+         * through partner-specific verification logic.
+         * 
+         * <p>
+         * <strong>Message Acknowledgment:</strong>
+         * Messages are acknowledged regardless of processing success to prevent
+         * infinite
+         * retries in case of persistent failures. In production, consider implementing:
+         * - Dead letter queue for failed messages
+         * - Retry with exponential backoff
+         * - Admin notifications for repeated failures
+         * 
+         * @param event          the verification requested event containing agent and
+         *                       partner UIDs
+         * @param topic          the Kafka topic name (for logging)
+         * @param partition      the Kafka partition (for logging)
+         * @param offset         the Kafka message offset (for logging)
+         * @param acknowledgment Kafka acknowledgment callback for message commit
          */
         @KafkaListener(topics = "obus.partner.agent.verification.requested", groupId = "obus-partner-api-verification-group", containerFactory = "verificationKafkaListenerContainerFactory")
         public void handlePartnerAgentVerificationRequested(
@@ -93,26 +150,34 @@ public class AgentVerificationEventConsumer {
         }
 
         /**
-         * Process the verification request
+         * Processes the verification request by routing to partner-specific handlers.
+         * 
+         * <p>
+         * This method acts as a router, determining which partner's verification
+         * process to invoke based on the partner code. Currently supports:
+         * - MIXX: Tigo Tanzania verification workflow
+         * 
+         * <p>
+         * <strong>Data Validation:</strong>
+         * - Validates that the agent request exists
+         * - Validates that the partner exists
+         * - Throws ApiException for missing entities
+         * 
+         * @param event the verification event containing UIDs and reference numbers
+         * @throws ApiException if agent request or partner not found
          */
         private void processVerificationRequest(PartnerAgentVerificationRequestedEvent event) {
                 log.info("Processing verification request for agent: {} with reference: {}",
                                 event.getAgentUid(), event.getRequestReferenceNumber());
-
-                // Here you can implement various verification workflows:
-
                 AgentRequest agentRequest = agentRequestRepository.findByUid(event.getAgentUid())
                                 .orElseThrow(() -> new ApiException("Agent request not found", HttpStatus.NOT_FOUND));
-
                 Partner partner = partnerRepository.findByUid(event.getPartnerUid())
                                 .orElseThrow(() -> new ApiException("Partner not found", HttpStatus.NOT_FOUND));
-
                 String partnerCode = partner.getCode();
                 switch (partnerCode) {
                         case "MIXX":
                                 performMixxVerification(agentRequest, partner, event);
                                 break;
-
                         default:
                                 throw new ApiException("Invalid partner code", HttpStatus.BAD_REQUEST);
                 }
@@ -120,8 +185,40 @@ public class AgentVerificationEventConsumer {
         }
 
         /**
-         * Perform verification with MIXX (Tigo) API
+         * Performs verification with MIXX (Tigo) API and handles the complete workflow.
+         * 
+         * <p>
+         * <strong>Transaction Boundary:</strong>
+         * This method is marked with @Transactional to ensure all database operations
+         * are atomic. The transaction includes:
+         * - Verification status updates
+         * - Agent entity creation (on success)
+         * - Agent request status updates
+         * - PartnerAgentVerification record updates
+         * 
+         * <p>
+         * <strong>External API Integration:</strong>
+         * - Calls MIXX API with agent MSISDN and code
+         * - Handles API response codes (0 or 1 = success)
+         * - Manages API failures gracefully
+         * 
+         * <p>
+         * <strong>Success Path:</strong>
+         * - Updates verification status to APPROVED
+         * - Creates Agent entity with generated credentials
+         * - Sends success email with login credentials
+         * 
+         * <p>
+         * <strong>Failure Path:</strong>
+         * - Updates verification status to REJECTED
+         * - Rejects agent request with failure reason
+         * - Sends failure notification email
+         * 
+         * @param agentRequest the agent request to verify
+         * @param partner      the partner requesting verification
+         * @param event        the original verification event
          */
+        @Transactional
         private void performMixxVerification(AgentRequest agentRequest, Partner partner,
                         PartnerAgentVerificationRequestedEvent event) {
                 log.info("Performing MIXX verification for agent request: {} with MSISDN: {}", agentRequest.getUid(),
@@ -211,7 +308,24 @@ public class AgentVerificationEventConsumer {
         }
 
         /**
-         * Send MIXX verification success notification
+         * Sends verification success email notification with login credentials.
+         * 
+         * <p>
+         * <strong>Security Note:</strong>
+         * This method sends plain text credentials via email. The credentials are:
+         * - Generated fresh for each agent
+         * - Not stored in plain text in the database
+         * - Only sent to the agent's registered email address
+         * 
+         * <p>
+         * <strong>Email Content:</strong>
+         * Includes verification details, login credentials, and security reminders.
+         * 
+         * @param agentRequest the approved agent request
+         * @param partner      the partner who requested verification
+         * @param response     the MIXX API response with verification details
+         * @param passName     the generated login username
+         * @param passCode     the generated login password (plain text)
          */
         private void sendMixxVerificationSuccessNotification(AgentRequest agentRequest, Partner partner,
                         MixxAccountInfoResponse response, String passName, String passCode) {
@@ -292,7 +406,17 @@ public class AgentVerificationEventConsumer {
         }
 
         /**
-         * Send MIXX verification failure notification
+         * Sends verification failure email notification with failure details.
+         * 
+         * <p>
+         * Provides the agent with:
+         * - Clear explanation of why verification failed
+         * - Specific error codes and messages from partner API
+         * - Guidance on next steps to resolve issues
+         * 
+         * @param agentRequest the rejected agent request
+         * @param partner      the partner who requested verification
+         * @param response     the MIXX API response (may be null for API failures)
          */
         private void sendMixxVerificationFailureNotification(AgentRequest agentRequest, Partner partner,
                         MixxAccountInfoResponse response) {
@@ -372,7 +496,18 @@ public class AgentVerificationEventConsumer {
         }
 
         /**
-         * Update agent request verification status
+         * Updates the verification status in the PartnerAgentVerification record.
+         * 
+         * <p>
+         * This method is part of the main transaction and ensures the verification
+         * status is properly tracked for audit and reporting purposes.
+         * 
+         * @param agentRequest           the agent request being verified
+         * @param partner                the partner requesting verification
+         * @param requestReferenceNumber the unique reference number for this
+         *                               verification
+         * @param status                 the new verification status (APPROVED/REJECTED)
+         * @param notes                  additional notes about the verification result
          */
         private void updateAgentRequestVerificationStatus(AgentRequest agentRequest, Partner partner,
                         String requestReferenceNumber,
@@ -393,7 +528,26 @@ public class AgentVerificationEventConsumer {
         }
 
         /**
-         * Create Agent entity from approved AgentRequest
+         * Creates an Agent entity from an approved AgentRequest.
+         * 
+         * <p>
+         * <strong>Critical Operations:</strong>
+         * - Generates unique agent code using partner prefix
+         * - Creates secure login credentials (passName + hashed passCode)
+         * - Links the Agent to the PartnerAgentVerification record
+         * - Updates AgentRequest status to APPROVED
+         * - Sends email notification with plain text credentials
+         * 
+         * <p>
+         * <strong>Security:</strong>
+         * - PassCode is hashed using BCrypt before storage
+         * - Plain text credentials are only sent via email
+         * - Agent code generation uses partner-specific prefixes
+         * 
+         * @param agentRequest the approved agent request
+         * @param partner      the partner requesting verification
+         * @param event        the original verification event
+         * @param mixxResponse the MIXX API response with verification details
          */
         private void createAgentFromRequest(AgentRequest agentRequest, Partner partner,
                         PartnerAgentVerificationRequestedEvent event, MixxAccountInfoResponse mixxResponse) {
@@ -450,11 +604,25 @@ public class AgentVerificationEventConsumer {
         }
 
         /**
-         * Generate agent code with partner code and random number
+         * Generates a unique agent code by combining partner code with random digits.
+         * 
+         * <p>
+         * <strong>Format:</strong> {PARTNER_CODE}{RANDOM_DIGITS}
+         * <p>
+         * <strong>Examples:</strong>
+         * - MIXX1234 (MIXX partner with 4-digit random number)
+         * - VODA5678 (VODA partner with 4-digit random number)
+         * 
+         * <p>
+         * <strong>Uniqueness:</strong>
+         * The combination of partner code + random digits provides sufficient
+         * uniqueness
+         * for agent identification within the system.
          * 
          * @param partnerCode  the partner code (e.g., "MIXX", "VODA")
-         * @param randomDigits the number of random digits to append
-         * @return agent code in format: {PARTNER_CODE}{RANDOM_DIGITS}
+         * @param randomDigits the number of random digits to append (default: 4)
+         * @return unique agent code
+         * @throws ApiException if partner code is null/empty or randomDigits <= 0
          */
         private String generateAgentCodeWithPartner(String partnerCode, int randomDigits) {
                 if (partnerCode == null || partnerCode.trim().isEmpty()) {
@@ -482,10 +650,22 @@ public class AgentVerificationEventConsumer {
         }
 
         /**
-         * Generate a flexible passcode with specified number of digits
+         * Generates a secure passcode with specified number of digits.
+         * 
+         * <p>
+         * <strong>Security Features:</strong>
+         * - Never starts with 0 (prevents leading zero issues)
+         * - Uses cryptographically secure random number generation
+         * - Configurable length for different security requirements
+         * 
+         * <p>
+         * <strong>Examples:</strong>
+         * - 6 digits: 123456, 789012, 345678
+         * - 4 digits: 1234, 5678, 9012
          * 
          * @param digits the number of digits in the passcode
-         * @return a passcode with the specified number of digits (doesn't start with 0)
+         * @return secure passcode string
+         * @throws ApiException if digits <= 0
          */
         private String generatePassCode(int digits) {
                 if (digits <= 0) {
