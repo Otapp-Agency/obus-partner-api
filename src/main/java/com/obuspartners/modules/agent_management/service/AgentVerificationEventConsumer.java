@@ -116,130 +116,7 @@ public class AgentVerificationEventConsumer {
                         default:
                                 throw new ApiException("Invalid partner code", HttpStatus.BAD_REQUEST);
                 }
-
-                // 1. Send notification to verification team
-                sendVerificationNotification(event);
-
-                // 2. Create verification tasks in external systems
-                createVerificationTasks(event);
-
-                // 3. Update verification status if needed
-                updateVerificationStatus(event);
-
-                // 4. Send email/SMS notifications
-                sendNotifications(event);
-
-                // 5. Log for audit purposes
-                logVerificationRequest(event);
-
                 log.info("Completed processing verification request for agent: {}", event.getAgentUid());
-        }
-
-        /**
-         * Send notification to verification team
-         */
-        private void sendVerificationNotification(PartnerAgentVerificationRequestedEvent event) {
-                log.info("Sending verification notification for agent: {} to verification team", event.getAgentUid());
-
-                // Implementation could include:
-                // - Slack notifications
-                // - Email to verification team
-                // - Dashboard updates
-                // - Mobile push notifications
-
-                // Example implementation:
-                String notificationMessage = String.format(
-                                "New agent verification request:\n" +
-                                                "Agent: %s (%s)\n" +
-                                                "Partner: %s (%s)\n" +
-                                                "Reference: %s\n" +
-                                                "Priority: %s\n" +
-                                                "Requested At: %s",
-                                event.getAgentBusinessName(),
-                                event.getAgentCode(),
-                                event.getPartnerBusinessName(),
-                                event.getPartnerCode(),
-                                event.getRequestReferenceNumber(),
-                                event.getPriority(),
-                                event.getRequestedAt());
-
-                log.info("Verification notification: {}", notificationMessage);
-        }
-
-        /**
-         * Create verification tasks in external systems
-         */
-        private void createVerificationTasks(PartnerAgentVerificationRequestedEvent event) {
-                log.info("Creating verification tasks for agent: {}", event.getAgentUid());
-
-                // Implementation could include:
-                // - Creating tasks in project management tools (Jira, Asana)
-                // - Adding to verification queue
-                // - Creating calendar events for verification team
-                // - Integrating with document management systems
-
-                // Example implementation:
-                log.info("Created verification task with ID: TASK-{} for agent: {}",
-                                event.getRequestReferenceNumber(), event.getAgentUid());
-        }
-
-        /**
-         * Update verification status if needed
-         */
-        private void updateVerificationStatus(PartnerAgentVerificationRequestedEvent event) {
-                log.info("Updating verification status for agent: {}", event.getAgentUid());
-
-                // Implementation could include:
-                // - Updating status in external systems
-                // - Syncing with partner systems
-                // - Updating dashboard metrics
-
-                // Example implementation:
-                log.info("Updated verification status to 'PROCESSING' for agent: {}", event.getAgentUid());
-        }
-
-        /**
-         * Send notifications to relevant parties
-         */
-        private void sendNotifications(PartnerAgentVerificationRequestedEvent event) {
-                log.info("Sending notifications for agent: {}", event.getAgentUid());
-
-                // Implementation could include:
-                // - Email to agent about verification status
-                // - SMS to agent contact person
-                // - Email to partner about verification request
-                // - Push notifications to mobile apps
-
-                // Example implementation:
-                if (event.getAgentBusinessEmail() != null) {
-                        log.info("Sending email notification to agent: {} at {}",
-                                        event.getAgentUid(), event.getAgentBusinessEmail());
-                }
-
-                if (event.getAgentMsisdn() != null) {
-                        log.info("Sending SMS notification to agent: {} at {}",
-                                        event.getAgentUid(), event.getAgentMsisdn());
-                }
-        }
-
-        /**
-         * Log verification request for audit purposes
-         */
-        private void logVerificationRequest(PartnerAgentVerificationRequestedEvent event) {
-                log.info("Audit log - Verification request received: " +
-                                "EventId={}, AgentUid={}, PartnerUid={}, Reference={}, Priority={}, RequestedAt={}",
-                                event.getEventId(),
-                                event.getAgentUid(),
-                                event.getPartnerUid(),
-                                event.getRequestReferenceNumber(),
-                                event.getPriority(),
-                                event.getRequestedAt());
-
-                // Implementation could include:
-                // - Writing to audit database
-                // - Sending to logging service (ELK, Splunk)
-                // - Creating audit trail entries
-                // - Compliance reporting
         }
 
         /**
@@ -250,124 +127,87 @@ public class AgentVerificationEventConsumer {
                 log.info("Performing MIXX verification for agent request: {} with MSISDN: {}", agentRequest.getUid(),
                                 agentRequest.getMsisdn());
 
-                // try {
-                        // Prepare request for MIXX API
-                        MixxAccountInfoRequest request = new MixxAccountInfoRequest();
-                        request.setAgentMSISDN(agentRequest.getMsisdn());
-                        request.setAgentCODE(agentRequest.getPartnerAgentNumber());
-                        request.setReferenceID(event.getRequestReferenceNumber());
+                // Prepare request for MIXX API
+                MixxAccountInfoRequest request = new MixxAccountInfoRequest();
+                request.setAgentMSISDN(agentRequest.getMsisdn());
+                request.setAgentCODE(agentRequest.getPartnerAgentNumber());
+                request.setReferenceID(event.getRequestReferenceNumber());
 
-                        // Set up headers
-                        HttpHeaders headers = new HttpHeaders();
-                        headers.setContentType(MediaType.APPLICATION_JSON);
+                // Set up headers
+                HttpHeaders headers = new HttpHeaders();
+                headers.setContentType(MediaType.APPLICATION_JSON);
 
-                        // Create HTTP entity
-                        HttpEntity<MixxAccountInfoRequest> httpEntity = new HttpEntity<>(request, headers);
+                // Create HTTP entity
+                HttpEntity<MixxAccountInfoRequest> httpEntity = new HttpEntity<>(request, headers);
 
-                        // Call MIXX API
-                        String mixxApiUrl = "https://accessgwtest.tigo.co.tz:8443/accountInfo";
-                        ResponseEntity<MixxAccountInfoResponse> response = restTemplate.postForEntity(
-                                        mixxApiUrl,
-                                        httpEntity,
-                                        MixxAccountInfoResponse.class);
+                // Call MIXX API
+                String mixxApiUrl = "https://accessgwtest.tigo.co.tz:8443/accountInfo";
+                ResponseEntity<MixxAccountInfoResponse> response = restTemplate.postForEntity(
+                                mixxApiUrl,
+                                httpEntity,
+                                MixxAccountInfoResponse.class);
 
-                        if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                                MixxAccountInfoResponse mixxResponse = response.getBody();
+                if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                        MixxAccountInfoResponse mixxResponse = response.getBody();
 
-                                if (mixxResponse.getResult() != null
-                                                && (mixxResponse.getResult() == 0 || mixxResponse.getResult() == 1)) { // verification bypass
-                                        // Verification successful
-                                        log.info("MIXX verification successful for agent request: {} - Agent Name: {}",
-                                                        agentRequest.getUid(), mixxResponse.getAgentName());
+                        if (mixxResponse.getResult() != null
+                                        && (mixxResponse.getResult() == 0 || mixxResponse.getResult() == 1)) { // verification
+                                                                                                               // bypass
+                                // Verification successful
+                                log.info("MIXX verification successful for agent request: {} - Agent Name: {}",
+                                                agentRequest.getUid(), mixxResponse.getAgentName());
 
-                                        // Update agent request verification status
-                                        updateAgentRequestVerificationStatus(agentRequest, partner,
-                                                        event.getRequestReferenceNumber(),
-                                                        AgentVerificationStatus.APPROVED,
-                                                        "MIXX verification successful. Agent Name: "
-                                                                        + mixxResponse.getAgentName());
+                                // Update agent request verification status
+                                updateAgentRequestVerificationStatus(agentRequest, partner,
+                                                event.getRequestReferenceNumber(),
+                                                AgentVerificationStatus.APPROVED,
+                                                "MIXX verification successful. Agent Name: "
+                                                                + mixxResponse.getAgentName());
 
-                                        // Create actual Agent entity
-                                        createAgentFromRequest(agentRequest, partner, event, mixxResponse);
+                                // Create actual Agent entity
+                                createAgentFromRequest(agentRequest, partner, event, mixxResponse);
 
-                                        // Send success notification (credentials will be generated in createAgentFromRequest)
-                                        // Note: The actual notification with credentials is sent from createAgentFromRequest method
+                                // Send success notification (credentials will be generated in
+                                // createAgentFromRequest)
+                                // Note: The actual notification with credentials is sent from
+                                // createAgentFromRequest method
 
-                                } else {
-                                        // Verification failed
-                                        log.warn("MIXX verification failed for agent request: {} - Result: {}, Message: {}",
-                                                        agentRequest.getUid(), mixxResponse.getResult(),
-                                                        mixxResponse.getMessage());
-
-                                        // Update agent request verification status
-                                        updateAgentRequestVerificationStatus(agentRequest, partner,
-                                                        event.getRequestReferenceNumber(),
-                                                        AgentVerificationStatus.REJECTED,
-                                                        "MIXX verification failed: " + mixxResponse.getMessage());
-
-                                        // Reject agent request
-                                        agentRequest.reject("SYSTEM",
-                                                        "MIXX verification failed: " + mixxResponse.getMessage());
-                                        agentRequestRepository.save(agentRequest);
-
-                                        // Send failure notification
-                                        sendMixxVerificationFailureNotification(agentRequest, partner, mixxResponse);
-                                }
                         } else {
-                                log.error("MIXX API call failed with status: {} for agent request: {}",
-                                                response.getStatusCode(), agentRequest.getUid());
+                                // Verification failed
+                                log.warn("MIXX verification failed for agent request: {} - Result: {}, Message: {}",
+                                                agentRequest.getUid(), mixxResponse.getResult(),
+                                                mixxResponse.getMessage());
 
                                 // Update agent request verification status
                                 updateAgentRequestVerificationStatus(agentRequest, partner,
                                                 event.getRequestReferenceNumber(),
                                                 AgentVerificationStatus.REJECTED,
-                                                "MIXX API call failed with status: " + response.getStatusCode());
+                                                "MIXX verification failed: " + mixxResponse.getMessage());
 
                                 // Reject agent request
                                 agentRequest.reject("SYSTEM",
-                                                "MIXX API call failed with status: " + response.getStatusCode());
+                                                "MIXX verification failed: " + mixxResponse.getMessage());
                                 agentRequestRepository.save(agentRequest);
+
+                                // Send failure notification
+                                sendMixxVerificationFailureNotification(agentRequest, partner, mixxResponse);
                         }
+                } else {
+                        log.error("MIXX API call failed with status: {} for agent request: {}",
+                                        response.getStatusCode(), agentRequest.getUid());
 
-                // } catch (Exception e) {
-                //         log.error("Error calling MIXX API for agent request: {}", agentRequest.getUid(), e);
+                        // Update agent request verification status
+                        updateAgentRequestVerificationStatus(agentRequest, partner,
+                                        event.getRequestReferenceNumber(),
+                                        AgentVerificationStatus.REJECTED,
+                                        "MIXX API call failed with status: " + response.getStatusCode());
 
-                //         // Update agent request verification status
-                //         updateAgentRequestVerificationStatus(agentRequest, partner, event.getRequestReferenceNumber(),
-                //                         AgentVerificationStatus.REJECTED,
-                //                         "MIXX API error: " + e.getMessage());
-
-                //         // Reject agent request
-                //         agentRequest.reject("SYSTEM", "MIXX API error: " + e.getMessage());
-                //         agentRequestRepository.save(agentRequest);
-                        
-                // }
-        }
-
-        /**
-         * Update agent verification status
-         */
-        private void updateAgentVerificationStatus(Agent agent, Partner partner, String requestReferenceNumber,
-                        AgentVerificationStatus status, String notes) {
-                log.info("Updating verification status for agent: {} to: {}", agent.getUid(), status);
-
-                PartnerAgentVerification verification = partnerAgentVerificationRepository
-                                .findByAgentAndPartnerAndRequestReferenceNumber(agent, partner, requestReferenceNumber)
-                                .orElseThrow(() -> new ApiException("Could not find verification information",
-                                                HttpStatus.NOT_FOUND));
-                verification.setAgentVerificationStatus(status);
-                verification.setVerificationNotes(notes);
-                partnerAgentVerificationRepository.save(verification);
-
-
-                // Implementation could include:
-                // - Updating verification status in database
-                // - Updating agent status
-                // - Creating verification history record
-                // - Sending status update events
-
-                log.info("Verification status updated for agent: {} to: {} with notes: {}",
-                                agent.getUid(), status, notes);
+                        // Reject agent request
+                        agentRequest.reject("SYSTEM",
+                                        "MIXX API call failed with status: " + response.getStatusCode());
+                        agentRequestRepository.save(agentRequest);
+                        sendMixxVerificationFailureNotification(agentRequest, partner, null);
+                }
         }
 
         /**
@@ -555,7 +395,8 @@ public class AgentVerificationEventConsumer {
         /**
          * Create Agent entity from approved AgentRequest
          */
-        private void createAgentFromRequest(AgentRequest agentRequest, Partner partner, PartnerAgentVerificationRequestedEvent event, MixxAccountInfoResponse mixxResponse) {
+        private void createAgentFromRequest(AgentRequest agentRequest, Partner partner,
+                        PartnerAgentVerificationRequestedEvent event, MixxAccountInfoResponse mixxResponse) {
                 log.info("Creating Agent entity from approved AgentRequest: {}", agentRequest.getUid());
 
                 Agent agent = new Agent();
@@ -579,7 +420,7 @@ public class AgentVerificationEventConsumer {
                 agent.setCode(generateAgentCode(partner.getCode()));
                 String plainPassName = generateLoginUsername(partner.getCode(), agentRequest.getPartnerAgentNumber());
                 String plainPassCode = generateLoginPassword(6);
-                
+
                 agent.setPassName(plainPassName);
                 agent.setPassCode(passwordEncoder.encode(plainPassCode));
 
@@ -600,7 +441,8 @@ public class AgentVerificationEventConsumer {
                 agentRequestRepository.save(agentRequest);
 
                 // Send success notification with plain text credentials
-                sendMixxVerificationSuccessNotification(agentRequest, partner, mixxResponse, plainPassName, plainPassCode);
+                sendMixxVerificationSuccessNotification(agentRequest, partner, mixxResponse, plainPassName,
+                                plainPassCode);
         }
 
         private String generateAgentCode(String partnerCode) {
@@ -610,7 +452,7 @@ public class AgentVerificationEventConsumer {
         /**
          * Generate agent code with partner code and random number
          * 
-         * @param partnerCode the partner code (e.g., "MIXX", "VODA")
+         * @param partnerCode  the partner code (e.g., "MIXX", "VODA")
          * @param randomDigits the number of random digits to append
          * @return agent code in format: {PARTNER_CODE}{RANDOM_DIGITS}
          */
@@ -618,15 +460,15 @@ public class AgentVerificationEventConsumer {
                 if (partnerCode == null || partnerCode.trim().isEmpty()) {
                         throw new ApiException("Partner code cannot be null or empty", HttpStatus.BAD_REQUEST);
                 }
-                
+
                 if (randomDigits <= 0) {
                         throw new ApiException("Number of random digits must be positive", HttpStatus.BAD_REQUEST);
                 }
-                
+
                 Random random = new Random();
                 int maxValue = (int) Math.pow(10, randomDigits) - 1; // e.g., for 4 digits: 9999
                 int minValue = (int) Math.pow(10, randomDigits - 1); // e.g., for 4 digits: 1000
-                
+
                 int randomNumber = random.nextInt(maxValue - minValue + 1) + minValue;
                 return partnerCode.toUpperCase() + randomNumber;
         }
@@ -649,18 +491,18 @@ public class AgentVerificationEventConsumer {
                 if (digits <= 0) {
                         throw new ApiException("Number of digits must be positive", HttpStatus.BAD_REQUEST);
                 }
-                
+
                 Random random = new Random();
                 int firstDigit = random.nextInt(9) + 1; // 1-9 (doesn't start with 0)
-                
+
                 if (digits == 1) {
                         return String.valueOf(firstDigit);
                 }
-                
+
                 // Calculate the maximum value for remaining digits
                 int maxRemaining = (int) Math.pow(10, digits - 1) - 1; // e.g., for 6 digits: 99999
                 int remainingDigits = random.nextInt(maxRemaining + 1); // 0 to maxRemaining
-                
+
                 // Format with leading zeros if needed
                 String formatString = "%d%0" + (digits - 1) + "d";
                 return String.format(formatString, firstDigit, remainingDigits);
