@@ -113,8 +113,19 @@ public class AgentAuthenticationServiceImpl implements AgentAuthenticationServic
         agentRepository.save(agent);
 
         // Generate JWT tokens
-        String accessToken = generateAgentAccessToken(agent);
-        String refreshToken = generateAgentRefreshToken(agent);
+        // Generate access token - limited scope if password change required
+        String accessToken;
+        if (agent.getUser() != null && agent.getUser().getRequirePasswordChange()) {
+            accessToken = generateLimitedAgentAccessToken(agent);
+        } else {
+            accessToken = generateAgentAccessToken(agent);
+        }
+        
+        // Generate refresh token only if password change is not required
+        String refreshToken = null;
+        if (agent.getUser() == null || !agent.getUser().getRequirePasswordChange()) {
+            refreshToken = generateAgentRefreshToken(agent);
+        }
 
         log.info("Agent {} authenticated successfully", agent.getPassName());
 
@@ -131,6 +142,13 @@ public class AgentAuthenticationServiceImpl implements AgentAuthenticationServic
             .partnerId(agent.getPartner().getId())
             .partnerUid(agent.getPartner().getUid())
             .partnerBusinessName(agent.getPartner().getBusinessName())
+            // Essential frontend fields
+            .displayName(agent.getUser() != null ? agent.getUser().getDisplayName() : agent.getContactPerson())
+            .roles(agent.getUser() != null ? agent.getUser().getRoles().stream().map(role -> role.getRoleType().getValue()).toList() : java.util.List.of())
+            .tokenExpiresAt(java.time.format.DateTimeFormatter.ofPattern("yyyy:MM:dd HH:mm:ss").format(jwtUtil.getExpirationDateFromToken(accessToken).toInstant().atZone(java.time.ZoneOffset.UTC).toLocalDateTime()))
+            .agentId(agent.getId())
+            .agentStatus(agent.getStatus().name())
+            .lastLoginAt(agent.getLastActivityDate() != null ? java.time.format.DateTimeFormatter.ofPattern("yyyy:MM:dd HH:mm:ss").format(agent.getLastActivityDate()) : null)
             .build();
     }
 
@@ -190,6 +208,12 @@ public class AgentAuthenticationServiceImpl implements AgentAuthenticationServic
         // Create a simple UserDetails-like object for JWT generation
         AgentUserDetails agentUserDetails = new AgentUserDetails(agent);
         return jwtUtil.generateToken(agentUserDetails);
+    }
+
+    private String generateLimitedAgentAccessToken(Agent agent) {
+        // Create a simple UserDetails-like object for JWT generation with limited scope
+        AgentUserDetails agentUserDetails = new AgentUserDetails(agent);
+        return jwtUtil.generateLimitedToken(agentUserDetails, "password_change");
     }
 
     /**

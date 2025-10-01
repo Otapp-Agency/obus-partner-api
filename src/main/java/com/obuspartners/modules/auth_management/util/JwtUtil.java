@@ -67,6 +67,13 @@ public class JwtUtil {
         return createToken(claims, userDetails.getUsername(), expiration);
     }
 
+    public String generateLimitedToken(UserDetails userDetails, String scope) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("scope", scope);
+        claims.put("type", "limited");
+        return createToken(claims, userDetails.getUsername(), expiration);
+    }
+
     public String generateRefreshToken(UserDetails userDetails) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("type", "refresh");
@@ -106,6 +113,43 @@ public class JwtUtil {
             Claims claims = getAllClaimsFromToken(token);
             String tokenType = claims.get("type", String.class);
             return "refresh".equals(tokenType) && !isTokenExpired(token);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Get token scope from claims
+     */
+    public String getTokenScope(String token) {
+        try {
+            Claims claims = getAllClaimsFromToken(token);
+            return claims.get("scope", String.class);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * Check if token is a limited scope token
+     */
+    public Boolean isLimitedToken(String token) {
+        try {
+            Claims claims = getAllClaimsFromToken(token);
+            String tokenType = claims.get("type", String.class);
+            return "limited".equals(tokenType);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Check if token has specific scope
+     */
+    public Boolean hasTokenScope(String token, String requiredScope) {
+        try {
+            String tokenScope = getTokenScope(token);
+            return requiredScope.equals(tokenScope);
         } catch (Exception e) {
             return false;
         }

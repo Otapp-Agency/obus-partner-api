@@ -29,4 +29,12 @@ public class AuthResponse {
     private String partnerUid;
     private String partnerCode;
     private String partnerBusinessName;
+    
+    // Essential frontend fields
+    private String displayName;
+    private java.util.List<String> roles;
+    private String tokenExpiresAt;
+    private Long agentId;
+    private String agentStatus;
+    private String lastLoginAt;
 }
