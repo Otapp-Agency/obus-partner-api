@@ -1,0 +1,78 @@
+# Encryption Configuration Example
+# Copy this to your application.yml and customize the keys
+
+app:
+  encryption:
+    # Primary encryption key (REQUIRED) - Must be exactly 32 characters for AES-256
+    # Generate a secure key using: PasswordEncryptionServiceImpl.generateEncryptionKey()
+    primary-key: "your-primary-encryption-key-32-chars-here"
+    
+    # Secondary encryption key (OPTIONAL) - Used for key rotation
+    # Should be set when rotating keys
+    secondary-key: ""
+    
+    # Key rotation settings
+    key-rotation:
+      enabled: false  # Set to true when rotating keys
+
+# Environment-specific examples:
+
+---
+# Development Environment
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+app:
+  encryption:
+    primary-key: "dev-obus-partner-api-secure-key-32-byte"
+    secondary-key: ""
+    key-rotation:
+      enabled: false
+
+---
+# Staging Environment
+spring:
+  config:
+    activate:
+      on-profile: staging
+
+app:
+  encryption:
+    primary-key: "staging-obus-partner-api-secure-key-32-byte"
+    secondary-key: ""
+    key-rotation:
+      enabled: false
+
+---
+# Production Environment
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+app:
+  encryption:
+    # Use environment variables in production for security
+    primary-key: ${ENCRYPTION_PRIMARY_KEY:}
+    secondary-key: ${ENCRYPTION_SECONDARY_KEY:}
+    key-rotation:
+      enabled: ${ENCRYPTION_KEY_ROTATION_ENABLED:false}
+
+# Key Rotation Example:
+# When rotating keys, follow these steps:
+# 1. Set the old key as secondary-key
+# 2. Set the new key as primary-key
+# 3. Enable key rotation
+# 4. Restart the application
+# 5. Run key rotation process
+# 6. Remove secondary-key and disable rotation
+
+# Example key rotation configuration:
+# app:
+#   encryption:
+#     primary-key: "new-obus-partner-api-secure-key-32-byte"
+#     secondary-key: "old-obus-partner-api-secure-key-32-byte"
+#     key-rotation:
+#       enabled: true
