@@ -126,7 +126,11 @@ public class AgentAuthenticationServiceImpl implements AgentAuthenticationServic
             .partnerAgentNumber(agent.getPartnerAgentNumber())
             .partnerCode(agent.getPartner().getCode())
             .email(agent.getBusinessEmail())
-            .role("AGENT")
+            .userType("AGENT")
+            .requireResetPassword(agent.getUser() != null ? agent.getUser().getRequirePasswordChange() : false)
+            .partnerId(agent.getPartner().getId())
+            .partnerUid(agent.getPartner().getUid())
+            .partnerBusinessName(agent.getPartner().getBusinessName())
             .build();
     }
 

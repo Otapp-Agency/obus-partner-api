@@ -31,6 +31,14 @@ public interface AgentService {
     AgentResponseDto createAgent(CreateAgentRequestDto createRequest);
 
     /**
+     * Create a new super agent (Admin only)
+     * 
+     * @param createRequest the super agent creation request
+     * @return the created super agent response
+     */
+    AgentResponseDto createSuperAgent(CreateSuperAgentRequestDto createRequest);
+
+    /**
      * Update an existing agent
      * 
      * @param uid the UID of the agent to update
@@ -403,6 +411,23 @@ public interface AgentService {
      * @return a unique agent code
      */
     String generateAgentCode(String partnerUid);
+
+    /**
+     * Generate login username for agent (consistent format across all agent types)
+     * 
+     * @param partnerCode the partner code
+     * @param partnerAgentNumber the partner agent number
+     * @return login username in format: PARTNERCODE-AGENTNUMBER
+     */
+    String generateAgentLoginUsername(String partnerCode, String partnerAgentNumber);
+
+    /**
+     * Generate agent passcode with specified number of digits
+     * 
+     * @param digits the number of digits in the passcode
+     * @return generated passcode (doesn't start with 0)
+     */
+    String generateAgentPasscode(int digits);
 
     /**
      * Update agent last activity

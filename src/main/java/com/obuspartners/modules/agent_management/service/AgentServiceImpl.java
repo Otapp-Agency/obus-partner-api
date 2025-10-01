@@ -28,6 +28,10 @@ import com.obuspartners.modules.partner_management.domain.entity.Partner;
 import com.obuspartners.modules.partner_management.repository.PartnerRepository;
 import com.obuspartners.modules.common.service.EmailService;
 import com.obuspartners.modules.common.service.EventProducerService;
+import com.obuspartners.modules.user_and_role_management.domain.entity.User;
+import com.obuspartners.modules.user_and_role_management.domain.enums.UserType;
+import com.obuspartners.modules.user_and_role_management.service.UserService;
+import com.obuspartners.modules.common.util.PasswordHelperService;
 
 /**
  * Implementation of AgentService for managing agent operations
@@ -47,6 +51,7 @@ public class AgentServiceImpl implements AgentService {
     private final EventProducerService eventProducerService;
     private final AgentRequestService agentRequestService;
     private final PasswordEncoder passwordEncoder;
+    private final UserService userService;
 
     // CRUD Operations
 
@@ -90,6 +95,121 @@ public class AgentServiceImpl implements AgentService {
                 .createdAt(agentRequestResponse.getCreatedAt())
                 .updatedAt(agentRequestResponse.getUpdatedAt())
                 .build();
+    }
+
+    @Override
+    @Transactional
+    public AgentResponseDto createSuperAgent(CreateSuperAgentRequestDto createRequest) {
+        log.info("Creating new super agent with partner agent number: {}", createRequest.getPartnerAgentNumber());
+
+        // Validate partner exists
+        Partner partner = partnerRepository.findById(createRequest.getPartnerId())
+                .orElseThrow(() -> new ApiException("Partner not found with ID: " + createRequest.getPartnerId(), HttpStatus.NOT_FOUND));
+
+        // Validate username uniqueness
+        if (userService.existsByUsername(createRequest.getUsername())) {
+            throw new ApiException("Username already exists: " + createRequest.getUsername(), HttpStatus.CONFLICT);
+        }
+
+        // Validate email uniqueness
+        if (userService.existsByEmail(createRequest.getEmail())) {
+            throw new ApiException("Email already exists: " + createRequest.getEmail(), HttpStatus.CONFLICT);
+        }
+
+        // Validate agent number uniqueness within partner
+        if (agentRepository.existsByPartnerAndPartnerAgentNumber(partner, createRequest.getPartnerAgentNumber())) {
+            throw new ApiException("Agent number already exists for this partner: " + createRequest.getPartnerAgentNumber(), HttpStatus.CONFLICT);
+        }
+
+        // Create Agent entity
+        Agent agent = new Agent();
+        agent.setPartnerAgentNumber(createRequest.getPartnerAgentNumber());
+        agent.setBusinessName(createRequest.getBusinessName());
+        agent.setContactPerson(createRequest.getContactPerson());
+        agent.setPhoneNumber(createRequest.getPhoneNumber());
+        agent.setMsisdn(createRequest.getMsisdn());
+        agent.setBusinessEmail(createRequest.getBusinessEmail());
+        agent.setBusinessAddress(createRequest.getBusinessAddress());
+        agent.setTaxId(createRequest.getTaxId());
+        agent.setLicenseNumber(createRequest.getLicenseNumber());
+        agent.setAgentType(AgentType.SUPER_AGENT);
+        agent.setPartner(partner);
+        agent.setNotes(createRequest.getNotes());
+        agent.setStatus(AgentStatus.ACTIVE);
+        agent.setRegistrationDate(LocalDateTime.now());
+
+        // Generate agent code and credentials
+        agent.setCode(generateAgentCodeWithPartner(partner.getCode(), 4));
+        String agentNumber = createRequest.getPartnerAgentNumber();
+        String plainPassName = generateAgentLoginUsername(partner.getCode(), createRequest.getPartnerAgentNumber()); // Use consistent format
+        String plainPassCode = generateAgentPasscode(6);
+
+        agent.setPassName(plainPassName);
+        agent.setPassCode(passwordEncoder.encode(plainPassCode));
+
+        // Save Agent first
+        Agent savedAgent = agentRepository.save(agent);
+        log.info("Super agent created successfully with UID: {}", savedAgent.getUid());
+
+        // Create User account for dashboard login
+        String dashboardPassword = PasswordHelperService.generateStrongPassword(); // Generate strong password for dashboard
+        User user = new User();
+        user.setUsername(createRequest.getUsername());
+        user.setEmail(createRequest.getEmail());
+        user.setPassword(dashboardPassword); // Set the generated password
+        user.setDisplayName(createRequest.getDisplayName());
+        user.setUserType(UserType.AGENT);
+        user.setAgent(savedAgent); // Link to the agent
+        user.setPartner(partner); // Set partner for context
+        user.setEnabled(true);
+        user.setAccountNonExpired(true);
+        user.setAccountNonLocked(true);
+        user.setCredentialsNonExpired(true);
+        user.setRequirePasswordChange(true); // Force password change on first login
+        user.setCreatedAt(LocalDateTime.now());
+
+        User savedUser = userService.save(user);
+        log.info("User account created successfully for super agent with ID: {}", savedUser.getId());
+
+        // Send email notification with credentials
+        try {
+            String subject = "Super Agent Account Created - " + partner.getBusinessName();
+            String body = String.format(
+                "Dear %s,\n\n" +
+                "Your Super Agent account has been successfully created with %s.\n\n" +
+                "Account Details:\n" +
+                "• Agent Code: %s\n" +
+                "• Business Name: %s\n" +
+                "• Partner: %s\n\n" +
+                "Dashboard Login Credentials:\n" +
+                "• Username: %s\n" +
+                "• Password: %s\n\n" +
+                "Agent Login Credentials (for App access):\n" +
+                "• Pass Name: %s\n" +
+                "• Pass Code: %s\n\n" +
+                "Please keep these credentials secure and do not share them with unauthorized persons.\n\n" +
+                "If you have any questions, please contact your system administrator.\n\n" +
+                "Best regards,\n" +
+                "OBUS Partners Team",
+                createRequest.getDisplayName(),
+                partner.getBusinessName(),
+                agent.getCode(),
+                createRequest.getDisplayName(),
+                partner.getBusinessName(),
+                createRequest.getUsername(),
+                dashboardPassword,
+                agentNumber,
+                plainPassCode
+            );
+            
+            emailService.sendEmail(createRequest.getEmail(), subject, body);
+            log.info("Super agent creation notification sent successfully");
+        } catch (Exception e) {
+            log.warn("Failed to send super agent creation notification: {}", e.getMessage());
+            // Don't fail the creation if email fails
+        }
+
+        return mapToAgentResponseDto(savedAgent);
     }
 
     @Override
@@ -610,6 +730,33 @@ public class AgentServiceImpl implements AgentService {
     }
 
     @Override
+    public String generateAgentLoginUsername(String partnerCode, String partnerAgentNumber) {
+        return partnerCode + "-" + partnerAgentNumber;
+    }
+
+    @Override
+    public String generateAgentPasscode(int digits) {
+        if (digits <= 0) {
+            throw new ApiException("Number of digits must be positive", HttpStatus.BAD_REQUEST);
+        }
+        
+        Random random = new Random();
+        int firstDigit = random.nextInt(9) + 1; // 1-9 (doesn't start with 0)
+        
+        if (digits == 1) {
+            return String.valueOf(firstDigit);
+        }
+        
+        // Calculate the maximum value for remaining digits
+        int maxRemaining = (int) Math.pow(10, digits - 1) - 1; // e.g., for 6 digits: 99999
+        int remainingDigits = random.nextInt(maxRemaining + 1); // 0 to maxRemaining
+        
+        // Format with leading zeros if needed
+        String formatString = "%d%0" + (digits - 1) + "d";
+        return String.format(formatString, firstDigit, remainingDigits);
+    }
+
+    @Override
     @Transactional
     public void updateLastActivity(String uid) {
         Agent agent = agentRepository.findByUid(uid)
@@ -790,8 +937,6 @@ public class AgentServiceImpl implements AgentService {
         dto.setUid(agent.getUid());
         dto.setCode(agent.getCode());
         dto.setPartnerAgentNumber(agent.getPartnerAgentNumber());
-        dto.setPassName(agent.getPassName());
-        dto.setPassCode(agent.getPassCode());
         dto.setBusinessName(agent.getBusinessName());
         dto.setContactPerson(agent.getContactPerson());
         dto.setPhoneNumber(agent.getPhoneNumber());
@@ -887,88 +1032,4 @@ public class AgentServiceImpl implements AgentService {
         int randomNumber = random.nextInt(maxValue - minValue + 1) + minValue;
         return partnerCode.toUpperCase() + randomNumber;
     }
-    
-    /**
-     * Generate login username for agent
-     * 
-     * @param partnerCode the partner code
-     * @param partnerAgentNumber the partner agent number
-     * @return login username in format: PARTNERCODE-AGENTNUMBER
-     */
-    private String generateLoginUsername(String partnerCode, String partnerAgentNumber) {
-        return partnerCode + "-" + partnerAgentNumber;
-    }
-    
-    /**
-     * Generate login password for agent with specified number of digits
-     * 
-     * @param digits the number of digits in the passcode
-     * @return generated password
-     */
-    private String generateLoginPassword(int digits) {
-        return generatePassCode(digits);
-    }
-
-    /**
-     * Generate a flexible passcode with specified number of digits
-     * 
-     * @param digits the number of digits in the passcode
-     * @return a passcode with the specified number of digits (doesn't start with 0)
-     */
-    private String generatePassCode(int digits) {
-        if (digits <= 0) {
-            throw new ApiException("Number of digits must be positive", HttpStatus.BAD_REQUEST);
-        }
-        
-        Random random = new Random();
-        int firstDigit = random.nextInt(9) + 1; // 1-9 (doesn't start with 0)
-        
-        if (digits == 1) {
-            return String.valueOf(firstDigit);
-        }
-        
-        // Calculate the maximum value for remaining digits
-        int maxRemaining = (int) Math.pow(10, digits - 1) - 1; // e.g., for 6 digits: 99999
-        int remainingDigits = random.nextInt(maxRemaining + 1); // 0 to maxRemaining
-        
-        // Format with leading zeros if needed
-        String formatString = "%d%0" + (digits - 1) + "d";
-        return String.format(formatString, firstDigit, remainingDigits);
-    }
-
-    /**
-     * Send agent credentials email
-     * 
-     * @param agent the agent entity
-     */
-    private void sendAgentCredentialsEmail(Agent agent, String plainPassCode) {
-        try {
-            String subject = "Welcome to OTAPP PARTNERS – Your Agent Account Credentials";
-            String message = String.format(
-                "Hello %s,\n\n" +
-                "Your OTAPP PARTNERS agent account has been successfully created.\n\n" + 
-                "Here are your login credentials:\n" +
-                "- Pass Name: %s\n" +
-                "- Pass Code: %s\n\n" +
-                "Please keep these credentials secure and do not share them with anyone.\n\n" +
-                "Login Instructions:\n" +
-                "1. Use your Pass Name (%s) and Pass Code to login\n" +
-                "2. Contact your partner for login assistance if needed\n\n" +
-                "If you did not request this account, please contact our support team.\n\n" +
-                "Regards,\nOTAPP Support Team",
-                agent.getContactPerson(),
-                agent.getPassName(),
-                plainPassCode,
-                agent.getPassName()
-            );
-
-            emailService.sendEmail(agent.getBusinessEmail(), subject, message);
-            log.info("Agent credentials email sent successfully to: {}", agent.getBusinessEmail());
-            
-        } catch (Exception e) {
-            log.error("Failed to send agent credentials email to {}: {}", agent.getBusinessEmail(), e.getMessage(), e);
-            // Don't throw exception to avoid failing agent creation if email fails
-        }
-    }
-
 }
