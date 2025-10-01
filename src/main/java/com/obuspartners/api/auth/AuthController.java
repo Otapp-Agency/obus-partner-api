@@ -75,13 +75,18 @@ public class AuthController {
             refreshTokenService.createRefreshToken(user);
         
         // Create response
-        AuthResponse response = new AuthResponse(
-            jwt,
-            refreshToken.getToken(),
-            user.getUsername(),
-            user.getEmail(),
-            user.getUserType().name()
-        );
+        AuthResponse response = AuthResponse.builder()
+            .accessToken(jwt)
+            .refreshToken(refreshToken.getToken())
+            .username(user.getUsername())
+            .email(user.getEmail())
+            .userType(user.getUserType().name())
+            .requireResetPassword(user.getRequirePasswordChange())
+            .partnerId(user.getPartner() != null ? user.getPartner().getId() : null)
+            .partnerUid(user.getPartner() != null ? user.getPartner().getUid() : null)
+            .partnerCode(user.getPartner() != null ? user.getPartner().getCode() : null)
+            .partnerBusinessName(user.getPartner() != null ? user.getPartner().getBusinessName() : null)
+            .build();
 
         return ResponseEntity.ok(new ResponseWrapper<>(true, 200, "Login successful", response));
     }
@@ -152,13 +157,18 @@ public class AuthController {
         refreshTokenService.revokeRefreshToken(refreshTokenRequest.getRefreshToken());
         
         // Create response
-        AuthResponse response = new AuthResponse(
-            newAccessToken,
-            newRefreshToken.getToken(),
-            user.getUsername(),
-            user.getEmail(),
-            user.getUserType().name()
-        );
+        AuthResponse response = AuthResponse.builder()
+            .accessToken(newAccessToken)
+            .refreshToken(newRefreshToken.getToken())
+            .username(user.getUsername())
+            .email(user.getEmail())
+            .userType(user.getUserType().name())
+            .requireResetPassword(user.getRequirePasswordChange())
+            .partnerId(user.getPartner() != null ? user.getPartner().getId() : null)
+            .partnerUid(user.getPartner() != null ? user.getPartner().getUid() : null)
+            .partnerCode(user.getPartner() != null ? user.getPartner().getCode() : null)
+            .partnerBusinessName(user.getPartner() != null ? user.getPartner().getBusinessName() : null)
+            .build();
 
         return ResponseEntity.ok(new ResponseWrapper<>(true, 200, "Token refreshed successfully", response));
     }

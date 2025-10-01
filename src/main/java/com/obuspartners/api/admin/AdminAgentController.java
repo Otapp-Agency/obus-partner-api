@@ -2,6 +2,7 @@ package com.obuspartners.api.admin;
 
 import com.obuspartners.modules.agent_management.domain.dto.*;
 import com.obuspartners.modules.agent_management.service.AgentService;
+import com.obuspartners.modules.common.exception.ApiException;
 import com.obuspartners.modules.common.util.PageResponseWrapper;
 import com.obuspartners.modules.common.util.ResponseWrapper;
 import io.swagger.v3.oas.annotations.Operation;
@@ -12,10 +13,12 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -101,5 +104,25 @@ public class AdminAgentController {
 
         AgentResponseDto updatedAgent = agentService.updateAgentStatus(uid, updateRequest.getStatus());
         return ResponseEntity.ok(new ResponseWrapper<>(true, 200, "Agent status updated successfully", updatedAgent));
+    }
+
+    /**
+     * Create a new super agent (Admin only)
+     */
+    @PostMapping("/super-agent")
+    @Operation(summary = "Create a new super agent")
+    // @ApiResponses(value = {
+    //     @ApiResponse(responseCode = "201", description = "Super agent created successfully"),
+    //     @ApiResponse(responseCode = "400", description = "Invalid request data"),
+    //     @ApiResponse(responseCode = "409", description = "Username, email, or agent number already exists"),
+    //     @ApiResponse(responseCode = "404", description = "Partner not found"),
+    //     @ApiResponse(responseCode = "401", description = "Unauthorized - Admin access required")
+    // })
+    public ResponseEntity<ResponseWrapper<AgentResponseDto>> createSuperAgent(
+            @Valid @RequestBody CreateSuperAgentRequestDto createRequest) {
+
+        AgentResponseDto createdSuperAgent = agentService.createSuperAgent(createRequest);
+        return ResponseEntity.status(201)
+                .body(new ResponseWrapper<>(true, 201, "Super agent created successfully", createdSuperAgent));
     }
 }

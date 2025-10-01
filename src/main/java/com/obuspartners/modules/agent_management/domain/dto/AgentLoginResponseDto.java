@@ -25,5 +25,9 @@ public class AgentLoginResponseDto {
     private String partnerAgentNumber;
     private String partnerCode;
     private String email;
-    private String role;
+    private String userType;
+    private boolean requireResetPassword;
+    private Long partnerId;
+    private String partnerUid;
+    private String partnerBusinessName;
 }
