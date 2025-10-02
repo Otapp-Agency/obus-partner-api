@@ -8,12 +8,12 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
-import java.util.concurrent.ConcurrentHashMap;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 
@@ -44,47 +44,10 @@ public class StationServiceImpl implements StationService {
 
     private static final String BMSLG_SEARCH_STATIONS_URL = "https://bms.oacl.co.tz/api/Agents-V8/Search-Stations.php";
     private static final String STATION_SALT = "5t@t!0n$";
-    private static final long CACHE_TTL_SECONDS = 3600; // 60 minutes
-    
-    // Custom cache with TTL support
-    private final Map<String, CachedStationData> stationCache = new ConcurrentHashMap<>();
-    
-    /**
-     * Cache wrapper class to store data with timestamp
-     */
-    private static class CachedStationData {
-        private final Object data;
-        private final Instant timestamp;
-        
-        public CachedStationData(Object data) {
-            this.data = data;
-            this.timestamp = Instant.now();
-        }
-        
-        public Object getData() {
-            return data;
-        }
-        
-        public Instant getTimestamp() {
-            return timestamp;
-        }
-        
-        public boolean isExpired(long ttlSeconds) {
-            return Instant.now().isAfter(timestamp.plusSeconds(ttlSeconds));
-        }
-    }
 
     @Override
+    @Cacheable(value = "stationCache", key = "'all_stations'")
     public Object fetchAllStations() {
-        String cacheKey = "all_stations";
-        
-        // Check cache first
-        CachedStationData cachedData = stationCache.get(cacheKey);
-        if (cachedData != null && !cachedData.isExpired(CACHE_TTL_SECONDS)) {
-            log.info("Returning cached station data (cached at: {})", cachedData.getTimestamp());
-            return cachedData.getData();
-        }
-        
         log.info("Cache miss or expired, fetching fresh station data from BMSLG");
         try {
             // Generate random auth key (1-5, but we removed RIPEMD160 support, so 1-4)
@@ -150,12 +113,7 @@ public class StationServiceImpl implements StationService {
             log.info("BMSLG Search Stations HTTP Code: {}", response.statusCode());
             log.info("BMSLG Search Stations Response: {}", response.body());
 
-            // Cache the response
-            Object responseData = response.body();
-            stationCache.put(cacheKey, new CachedStationData(responseData));
-            log.info("Station data cached successfully");
-
-            return responseData;
+            return response.body();
 
         } catch (IOException | InterruptedException e) {
             log.error("Error during BMSLG stations fetch", e);
@@ -167,8 +125,8 @@ public class StationServiceImpl implements StationService {
      * Clear the station cache manually
      * Useful for forcing a fresh fetch on next request
      */
+    @CacheEvict(value = "stationCache", key = "'all_stations'")
     public void clearStationCache() {
-        stationCache.clear();
         log.info("Station cache cleared manually");
     }
 
@@ -178,18 +136,12 @@ public class StationServiceImpl implements StationService {
      */
     public Map<String, Object> getCacheStats() {
         Map<String, Object> stats = new HashMap<>();
-        stats.put("cacheSize", stationCache.size());
-        stats.put("ttlSeconds", CACHE_TTL_SECONDS);
-        
-        CachedStationData cachedData = stationCache.get("all_stations");
-        if (cachedData != null) {
-            stats.put("cachedAt", cachedData.getTimestamp());
-            stats.put("isExpired", cachedData.isExpired(CACHE_TTL_SECONDS));
-        } else {
-            stats.put("cachedAt", null);
-            stats.put("isExpired", true);
-        }
-        
+        stats.put("cacheType", "Spring Cache (Redis or In-Memory)");
+        stats.put("cacheName", "stationCache");
+        stats.put("cacheKey", "all_stations");
+        stats.put("ttlSeconds", 3600);
+        stats.put("ttlMinutes", 60);
+        stats.put("note", "Cache statistics depend on underlying cache implementation");
         return stats;
     }
 

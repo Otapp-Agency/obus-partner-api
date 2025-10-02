@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: obus-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - obus-network
+
+  redis-insight:
+    image: redislabs/redisinsight:latest
+    container_name: obus-redis-insight
+    ports:
+      - "8001:8001"
+    volumes:
+      - redis_insight_data:/data
+    restart: unless-stopped
+    networks:
+      - obus-network
+    depends_on:
+      - redis
+
+volumes:
+  redis_data:
+    driver: local
+  redis_insight_data:
+    driver: local
+
+networks:
+  obus-network:
+    driver: bridge
