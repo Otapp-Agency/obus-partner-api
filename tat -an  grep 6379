@@ -1,0 +1,205 @@
+[1mdiff --git a/src/main/java/com/obuspartners/api/partner/PartnerAgentApiController.java b/src/main/java/com/obuspartners/api/partner/PartnerAgentApiController.java[m
+[1mindex d7cb3a3..b167bf9 100644[m
+[1m--- a/src/main/java/com/obuspartners/api/partner/PartnerAgentApiController.java[m
+[1m+++ b/src/main/java/com/obuspartners/api/partner/PartnerAgentApiController.java[m
+[36m@@ -1,6 +1,8 @@[m
+ package com.obuspartners.api.partner;[m
+ [m
+ import com.obuspartners.modules.common.util.ResponseWrapper;[m
+[32m+[m[32mimport com.obuspartners.modules.partner_integration.bmslg.Auth;[m
+[32m+[m[32mimport com.obuspartners.modules.partner_integration.stations.StationService;[m
+ import com.obuspartners.modules.agent_management.service.AgentAuthenticationService;[m
+ import com.obuspartners.modules.agent_management.service.AgentBusCoreSystemService;[m
+ import com.obuspartners.modules.partner_management.service.PartnerService;[m
+[36m@@ -10,6 +12,7 @@[m [mimport io.swagger.v3.oas.annotations.responses.ApiResponse;[m
+ import io.swagger.v3.oas.annotations.responses.ApiResponses;[m
+ import io.swagger.v3.oas.annotations.tags.Tag;[m
+ import jakarta.servlet.http.HttpServletRequest;[m
+[32m+[m[32mimport lombok.Data;[m
+ import lombok.RequiredArgsConstructor;[m
+ import lombok.extern.slf4j.Slf4j;[m
+ import org.springframework.http.HttpStatus;[m
+[36m@@ -38,37 +41,33 @@[m [mpublic class PartnerAgentApiController {[m
+     private final AgentBusCoreSystemService agentBusCoreSystemService;[m
+     private final PartnerService partnerService;[m
+     private final PartnerApiKeyService partnerApiKeyService;[m
+[32m+[m[32m    private final StationService stationService;[m
+ [m
+     /**[m
+[31m-     * Test endpoint for Partner Agent API - requires both partner API key and agent JWT authentication[m
+[32m+[m[32m     * Test endpoint for Partner Agent API - requires both partner API key and agent[m
+[32m+[m[32m     * JWT authentication[m
+      * [m
+      * @return ResponseEntity with test response[m
+      */[m
+     @Operation(summary = "Test endpoint", description = "Simple test endpoint for Partner Agent API - requires both partner API key authentication and agent JWT authentication")[m
+[31m-    @ApiResponses(value = {[m
+[31m-        @ApiResponse(responseCode = "200", description = "Test successful"),[m
+[31m-        @ApiResponse(responseCode = "401", description = "Unauthorized - partner API key or agent JWT token required"),[m
+[31m-        @ApiResponse(responseCode = "403", description = "Forbidden - agent role required"),[m
+[31m-        @ApiResponse(responseCode = "500", description = "Internal server error")[m
+[31m-    })[m
+     @PostMapping("/test")[m
+     public ResponseEntity<ResponseWrapper<Map<String, Object>>> test(HttpServletRequest request) {[m
+         log.info("Test endpoint called for Partner Agent API");[m
+[31m-        [m
+[32m+[m
+         try {[m
+             // Get authenticated agent information[m
+             String authenticatedAgent = SecurityContextHolder.getContext().getAuthentication().getName();[m
+[31m-            [m
+[32m+[m
+             // Extract API Key and Secret for partner validation[m
+             String apiKey = request.getHeader("X-API-Key");[m
+             String apiSecret = request.getHeader("X-API-Secret");[m
+[31m-            [m
+[32m+[m
+             Map<String, Object> testData = new HashMap<>();[m
+             testData.put("message", "Partner Agent API is working");[m
+             testData.put("timestamp", String.valueOf(System.currentTimeMillis()));[m
+             testData.put("endpoint", "/partner/v1/agent-api/test");[m
+             testData.put("authenticatedAgent", authenticatedAgent);[m
+[31m-            [m
+[32m+[m
+             // Get agent information from JWT token[m
+             try {[m
+                 String jwtToken = request.getHeader("Authorization");[m
+[36m@@ -87,14 +86,14 @@[m [mpublic class PartnerAgentApiController {[m
+                         agentInfo.put("partnerId", agentResponse.getPartnerId());[m
+                         agentInfo.put("partnerBusinessName", agentResponse.getPartnerBusinessName());[m
+                         testData.put("agentInfo", agentInfo);[m
+[31m-                        [m
+[32m+[m
+                         // Get agent's active bus core systems[m
+                         try {[m
+                             // For testing purposes, we'll create a simple agent entity[m
+                             var agent = new com.obuspartners.modules.agent_management.domain.entity.Agent();[m
+                             agent.setId(agentResponse.getId());[m
+                             agent.setPassName(agentResponse.getPassName());[m
+[31m-                            [m
+[32m+[m
+                             var activeBusSystems = agentBusCoreSystemService.getActiveBusCoreSystemsByAgent(agent);[m
+                             if (activeBusSystems != null && !activeBusSystems.isEmpty()) {[m
+                                 testData.put("activeBusCoreSystems", activeBusSystems);[m
+[36m@@ -111,16 +110,17 @@[m [mpublic class PartnerAgentApiController {[m
+                 log.warn("Could not fetch agent information for: {}", authenticatedAgent, e);[m
+                 testData.put("agentInfo", "Not available");[m
+             }[m
+[31m-            [m
+[32m+[m
+             // Get partner information using API key[m
+             try {[m
+                 if (apiKey != null && apiSecret != null) {[m
+[31m-                    Optional<PartnerApiKeyService.ApiKeyInfo> apiKeyInfoOpt = partnerApiKeyService.validateApiKeyAndSecret(apiKey, apiSecret);[m
+[32m+[m[32m                    Optional<PartnerApiKeyService.ApiKeyInfo> apiKeyInfoOpt = partnerApiKeyService[m
+[32m+[m[32m                            .validateApiKeyAndSecret(apiKey, apiSecret);[m
+                     if (apiKeyInfoOpt.isPresent()) {[m
+                         var apiKeyInfo = apiKeyInfoOpt.get();[m
+[31m-                        Optional<com.obuspartners.modules.partner_management.domain.dto.PartnerResponseDto> partnerOpt = [m
+[31m-                            partnerService.getPartnerByUid(apiKeyInfo.getPartnerUid());[m
+[31m-                        [m
+[32m+[m[32m                        Optional<com.obuspartners.modules.partner_management.domain.dto.PartnerResponseDto> partnerOpt = partnerService[m
+[32m+[m[32m                                .getPartnerByUid(apiKeyInfo.getPartnerUid());[m
+[32m+[m
+                         if (partnerOpt.isPresent()) {[m
+                             var partnerInfo = partnerOpt.get();[m
+                             Map<String, Object> partnerData = new HashMap<>();[m
+[36m@@ -137,7 +137,7 @@[m [mpublic class PartnerAgentApiController {[m
+                             partnerData.put("status", partnerInfo.getStatus());[m
+                             partnerData.put("code", partnerInfo.getCode());[m
+                             testData.put("partnerInfo", partnerData);[m
+[31m-                            [m
+[32m+[m
+                             // Add API key info[m
+                             Map<String, Object> apiKeyData = new HashMap<>();[m
+                             apiKeyData.put("keyName", apiKeyInfo.getKeyName());[m
+[36m@@ -153,25 +153,77 @@[m [mpublic class PartnerAgentApiController {[m
+                 log.warn("Could not fetch partner information for API key: {}", apiKey, e);[m
+                 testData.put("partnerInfo", "Not available");[m
+             }[m
+[31m-            [m
+[32m+[m
+             ResponseWrapper<Map<String, Object>> response = new ResponseWrapper<>([m
+[31m-                true, [m
+[31m-                200, [m
+[31m-                "Test successful", [m
+[31m-                testData[m
+[31m-            );[m
+[32m+[m[32m                    true,[m
+[32m+[m[32m                    200,[m
+[32m+[m[32m                    "Test successful",[m
+[32m+[m[32m                    testData);[m
+             return ResponseEntity.ok(response);[m
+[31m-            [m
+[32m+[m
+         } catch (Exception e) {[m
+             log.error("Error in test endpoint", e);[m
+             ResponseWrapper<Map<String, Object>> errorResponse = new ResponseWrapper<>([m
+[31m-                false, [m
+[31m-                HttpStatus.INTERNAL_SERVER_ERROR.value(), [m
+[31m-                "Internal server error", [m
+[31m-                null[m
+[31m-            );[m
+[32m+[m[32m                    false,[m
+[32m+[m[32m                    HttpStatus.INTERNAL_SERVER_ERROR.value(),[m
+[32m+[m[32m                    "Internal server error",[m
+[32m+[m[32m                    null);[m
+             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);[m
+         }[m
+     }[m
+ [m
+[32m+[m[32m    @Operation(summary = "Test BMSLG Login", description = "Test BMSLG authentication with agent credentials - requires both partner API key authentication and agent JWT authentication")[m
+[32m+[m[32m    @PostMapping("/test-bms-login")[m
+[32m+[m[32m    public ResponseEntity<ResponseWrapper<Auth.AuthResponse>> testBmsLogin(@RequestBody BmsAuthInfo info,[m
+[32m+[m[32m            HttpServletRequest request) {[m
+[32m+[m[32m        log.info("BMSLG test login endpoint called for username: {}", info.getUsername());[m
+[32m+[m
+[32m+[m[32m        try {[m
+[32m+[m[32m            // Perform BMSLG authentication[m
+[32m+[m[32m            Auth.AuthResponse authResponse = (new Auth()).authenticateWithDefaults([m
+[32m+[m[32m                    info.getUsername(),[m
+[32m+[m[32m                    info.getPassword(),[m
+[32m+[m[32m                    info.getOwnerId());[m
+[32m+[m
+[32m+[m[32m            // Wrap response in standard format[m
+[32m+[m[32m            ResponseWrapper<Auth.AuthResponse> response = new ResponseWrapper<>([m
+[32m+[m[32m                    authResponse.isSuccess(),[m
+[32m+[m[32m                    authResponse.getHttpCode(),[m
+[32m+[m[32m                    authResponse.isSuccess() ? "BMSLG authentication successful" : "BMSLG authentication failed",[m
+[32m+[m[32m                    authResponse);[m
+[32m+[m
+[32m+[m[32m            return ResponseEntity.status(authResponse.getHttpCode()).body(response);[m
+[32m+[m
+[32m+[m[32m        } catch (Exception e) {[m
+[32m+[m[32m            log.error("Error during BMSLG authentication test", e);[m
+[32m+[m[32m            ResponseWrapper<Auth.AuthResponse> errorResponse = new ResponseWrapper<>([m
+[32m+[m[32m                    false,[m
+[32m+[m[32m                    HttpStatus.INTERNAL_SERVER_ERROR.value(),[m
+[32m+[m[32m                    "Internal server error during BMSLG authentication",[m
+[32m+[m[32m                    null);[m
+[32m+[m[32m            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);[m
+[32m+[m[32m        }[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    /**[m
+[32m+[m[32m     * Fetch all stations from BMSLG - requires both partner API key and agent JWT[m
+[32m+[m[32m     * authentication[m
+[32m+[m[32m     *[m
+[32m+[m[32m     * @return ResponseEntity with stations data[m
+[32m+[m[32m     */[m
+[32m+[m[32m    @Operation(summary = "Fetch All Stations", description = "Fetch all stations from BMSLG system - requires both partner API key authentication and agent JWT authentication")[m
+[32m+[m[32m    @GetMapping("/stations")[m
+[32m+[m[32m    public ResponseEntity<Object> fetchAllStations(HttpServletRequest request) {[m
+[32m+[m[32m        log.info("Fetch all stations endpoint called for Partner Agent API");[m
+[32m+[m[32m        Object stationsData = stationService.fetchAllStations();[m
+[32m+[m[32m        return ResponseEntity.ok(stationsData);[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    @Data[m
+[32m+[m[32m    static class BmsAuthInfo {[m
+[32m+[m[32m        String username;[m
+[32m+[m[32m        String password;[m
+[32m+[m[32m        String ownerId;[m
+[32m+[m[32m    }[m
+[32m+[m
+ }[m

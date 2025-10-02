@@ -1,0 +1,86 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: obus-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - obus-network
+
+  redis-insight:
+    image: redislabs/redisinsight:latest
+    container_name: obus-redis-insight
+    ports:
+      - "8001:8001"
+    volumes:
+      - redis_insight_data:/data
+    restart: unless-stopped
+    networks:
+      - obus-network
+    depends_on:
+      - redis
+
+  # Optional: MySQL database
+  mysql:
+    image: mysql:8.0
+    container_name: obus-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: obus_partner_db_test
+      MYSQL_USER: obus
+      MYSQL_PASSWORD: obus123
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    restart: unless-stopped
+    networks:
+      - obus-network
+
+  # Optional: Kafka
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    container_name: obus-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - obus-network
+
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    container_name: obus-kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    networks:
+      - obus-network
+
+volumes:
+  redis_data:
+    driver: local
+  redis_insight_data:
+    driver: local
+  mysql_data:
+    driver: local
+
+networks:
+  obus-network:
+    driver: bridge

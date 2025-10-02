@@ -1,29 +1,33 @@
 package com.obuspartners.modules.common.config;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Primary;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
 
 /**
- * Cache configuration for API key validation and other caching needs
+ * Fallback cache configuration for when Redis is not available
+ * 
+ * This configuration will only be used when Redis is not available or
+ * RedisConnectionFactory is not present in the classpath.
  * 
  * @author OBUS Team
  * @version 1.0.0
  */
 @Configuration
 @EnableCaching
+@ConditionalOnMissingBean(RedisConnectionFactory.class)
 public class CacheConfig {
 
     /**
-     * Configure cache manager for API key validation and station data
-     * In production, replace with Redis cache manager for better performance and TTL support
+     * Configure fallback cache manager when Redis is not available
+     * This will be used automatically when Redis is not running
      */
     @Bean
-    @Primary
-    public CacheManager cacheManager() {
+    public CacheManager fallbackCacheManager() {
         ConcurrentMapCacheManager cacheManager = new ConcurrentMapCacheManager();
         
         // Configure cache names including station cache
