@@ -37,7 +37,7 @@ public class PartnerAgentController {
     /**
      * Submit an agent registration request with partner verification
      */
-    @PostMapping("/register")
+    @PostMapping("/register-self")
     @Operation(summary = "Submit agent registration request with partner verification")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "201", description = "Agent registration request submitted successfully"),

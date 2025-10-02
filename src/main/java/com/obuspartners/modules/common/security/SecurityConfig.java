@@ -1,6 +1,5 @@
 package com.obuspartners.modules.common.security;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
@@ -31,8 +30,6 @@ public class SecurityConfig {
     private final JwtRequestFilter jwtRequestFilter;
     private final AgentJwtRequestFilter agentJwtRequestFilter;
 
-    @Autowired
-    private ApiKeyAuthenticationFilter apiKeyAuthenticationFilter;
 
     public SecurityConfig(JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint,
                          JwtRequestFilter jwtRequestFilter,
@@ -60,6 +57,8 @@ public class SecurityConfig {
                 .requestMatchers("/v1/auth/agent/login").permitAll()
                 .requestMatchers("/v1/partners/public/**").permitAll()
                 .requestMatchers("/demo/kafka/**", "/demo/email/**").permitAll() // Allow demo Kafka and email endpoints without authentication
+                .requestMatchers("/partner/v1/agents/register-self", "/api/partner/v1/agents/register-self").permitAll() // Allow agent self-registration with API key validation only
+                .requestMatchers("/partner/v1/agent-api/**", "/api/partner/v1/agent-api/**").hasRole("AGENT") // Require agent role for agent API endpoints
                 .requestMatchers("/partner/**").authenticated() // Just require authentication, no specific role
                 .requestMatchers("/api/agent/**").hasRole("AGENT")
                 .anyRequest().authenticated()
@@ -67,7 +66,7 @@ public class SecurityConfig {
             .exceptionHandling(ex -> ex.authenticationEntryPoint(jwtAuthenticationEntryPoint))
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
-        http.addFilterBefore(apiKeyAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+        // API key authentication removed - handled in AgentJwtRequestFilter for partner validation only
         http.addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
         http.addFilterBefore(agentJwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
 

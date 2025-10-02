@@ -113,19 +113,11 @@ public class AgentAuthenticationServiceImpl implements AgentAuthenticationServic
         agentRepository.save(agent);
 
         // Generate JWT tokens
-        // Generate access token - limited scope if password change required
-        String accessToken;
-        if (agent.getUser() != null && agent.getUser().getRequirePasswordChange()) {
-            accessToken = generateLimitedAgentAccessToken(agent);
-        } else {
-            accessToken = generateAgentAccessToken(agent);
-        }
+        // Always generate full access token for agents (no password change requirement)
+        String accessToken = generateAgentAccessToken(agent);
         
-        // Generate refresh token only if password change is not required
-        String refreshToken = null;
-        if (agent.getUser() == null || !agent.getUser().getRequirePasswordChange()) {
-            refreshToken = generateAgentRefreshToken(agent);
-        }
+        // Always generate refresh token for agents
+        String refreshToken = generateAgentRefreshToken(agent);
 
         log.info("Agent {} authenticated successfully", agent.getPassName());
 
@@ -138,7 +130,7 @@ public class AgentAuthenticationServiceImpl implements AgentAuthenticationServic
             .partnerCode(agent.getPartner().getCode())
             .email(agent.getBusinessEmail())
             .userType("AGENT")
-            .requireResetPassword(agent.getUser() != null ? agent.getUser().getRequirePasswordChange() : false)
+            .requireResetPassword(false) // Always false for agents
             .partnerId(agent.getPartner().getId())
             .partnerUid(agent.getPartner().getUid())
             .partnerBusinessName(agent.getPartner().getBusinessName())
