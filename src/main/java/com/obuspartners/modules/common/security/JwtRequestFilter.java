@@ -78,4 +78,15 @@ public class JwtRequestFilter extends OncePerRequestFilter {
         }
         chain.doFilter(request, response);
     }
+
+    @Override
+    protected boolean shouldNotFilter(@NonNull HttpServletRequest request) {
+        // Skip agent API endpoints - they are handled by AgentJwtRequestFilter
+        String requestURI = request.getRequestURI();
+        boolean shouldNotFilter = requestURI.startsWith("/api/agent/") || 
+                                 requestURI.startsWith("/partner/v1/agent-api/") ||
+                                 requestURI.startsWith("/api/partner/v1/agent-api/");
+        log.debug("JwtRequestFilter shouldNotFilter: {} for URI: {}", shouldNotFilter, requestURI);
+        return shouldNotFilter;
+    }
 }
