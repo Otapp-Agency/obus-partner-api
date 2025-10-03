@@ -29,8 +29,8 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "agents", 
        uniqueConstraints = {
-           @UniqueConstraint(columnNames = {"partner_id", "partnerAgentNumber"}),
-           @UniqueConstraint(columnNames = {"partner_id", "msisdn"})
+           @UniqueConstraint(columnNames = {"group_agent_id", "partnerAgentNumber"}),
+           @UniqueConstraint(columnNames = {"group_agent_id", "msisdn"})
        })
 public class Agent {
 
@@ -46,11 +46,11 @@ public class Agent {
     @JoinColumn(name = "user_id")
     private User user;
 
-    // Agent belongs to a partner
+    // Agent belongs to a group agent (which belongs to a partner)
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "partner_id", nullable = false)
-    @NotNull(message = "Partner is required")
-    private Partner partner;
+    @JoinColumn(name = "group_agent_id", nullable = false)
+    @NotNull(message = "Group agent is required")
+    private GroupAgent groupAgent;
 
     // Super agent relationship for sub-agents
     @ManyToOne(fetch = FetchType.LAZY)
@@ -179,9 +179,14 @@ public class Agent {
         this.updatedAt = LocalDateTime.now();
     }
 
-    // Partner relationship methods
+    // GroupAgent relationship methods
+    public boolean belongsToGroupAgent(GroupAgent groupAgent) {
+        return this.groupAgent != null && this.groupAgent.equals(groupAgent);
+    }
+
     public boolean belongsToPartner(Partner partner) {
-        return this.partner != null && this.partner.equals(partner);
+        return this.groupAgent != null && this.groupAgent.getPartner() != null && 
+               this.groupAgent.getPartner().equals(partner);
     }
 
     // Super agent relationship methods

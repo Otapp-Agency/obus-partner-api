@@ -564,7 +564,8 @@ public class AgentVerificationEventConsumer {
                 agent.setTaxId(agentRequest.getTaxId());
                 agent.setLicenseNumber(agentRequest.getLicenseNumber());
                 agent.setAgentType(agentRequest.getAgentType());
-                agent.setPartner(agentRequest.getPartner());
+                // TODO: Set GroupAgent instead of Partner directly
+                // agent.setGroupAgent(groupAgent); // This needs to be implemented when GroupAgent service is ready
                 agent.setSuperAgent(agentRequest.getSuperAgent());
                 agent.setNotes(agentRequest.getNotes());
                 agent.setStatus(AgentStatus.ACTIVE);

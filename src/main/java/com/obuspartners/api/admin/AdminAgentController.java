@@ -111,13 +111,6 @@ public class AdminAgentController {
      */
     @PostMapping("/super-agent")
     @Operation(summary = "Create a new super agent")
-    // @ApiResponses(value = {
-    //     @ApiResponse(responseCode = "201", description = "Super agent created successfully"),
-    //     @ApiResponse(responseCode = "400", description = "Invalid request data"),
-    //     @ApiResponse(responseCode = "409", description = "Username, email, or agent number already exists"),
-    //     @ApiResponse(responseCode = "404", description = "Partner not found"),
-    //     @ApiResponse(responseCode = "401", description = "Unauthorized - Admin access required")
-    // })
     public ResponseEntity<ResponseWrapper<AgentResponseDto>> createSuperAgent(
             @Valid @RequestBody CreateSuperAgentRequestDto createRequest) {
 

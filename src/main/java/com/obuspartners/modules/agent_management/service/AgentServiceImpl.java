@@ -20,7 +20,9 @@ import java.util.stream.Collectors;
 import com.obuspartners.modules.common.exception.ApiException;
 import com.obuspartners.modules.agent_management.domain.dto.*;
 import com.obuspartners.modules.agent_management.domain.entity.Agent;
+import com.obuspartners.modules.agent_management.domain.entity.GroupAgent;
 import com.obuspartners.modules.agent_management.service.AgentRequestService;
+import com.obuspartners.modules.agent_management.service.GroupAgentService;
 import com.obuspartners.modules.agent_management.domain.enums.AgentStatus;
 import com.obuspartners.modules.agent_management.domain.enums.AgentType;
 import com.obuspartners.modules.agent_management.repository.AgentRepository;
@@ -47,6 +49,7 @@ public class AgentServiceImpl implements AgentService {
 
     private final AgentRepository agentRepository;
     private final PartnerRepository partnerRepository;
+    private final GroupAgentService groupAgentService;
     private final EmailService emailService;
     private final EventProducerService eventProducerService;
     private final AgentRequestService agentRequestService;
@@ -102,9 +105,11 @@ public class AgentServiceImpl implements AgentService {
     public AgentResponseDto createSuperAgent(CreateSuperAgentRequestDto createRequest) {
         log.info("Creating new super agent with partner agent number: {}", createRequest.getPartnerAgentNumber());
 
-        // Validate partner exists
-        Partner partner = partnerRepository.findById(createRequest.getPartnerId())
-                .orElseThrow(() -> new ApiException("Partner not found with ID: " + createRequest.getPartnerId(), HttpStatus.NOT_FOUND));
+        // Validate GroupAgent exists and get partner from it
+        GroupAgent groupAgent = groupAgentService.getGroupAgentById(createRequest.getGroupAgentId())
+                .orElseThrow(() -> new ApiException("GroupAgent not found with ID: " + createRequest.getGroupAgentId(), HttpStatus.NOT_FOUND));
+        
+        Partner partner = groupAgent.getPartner();
 
         // Validate username uniqueness
         if (userService.existsByUsername(createRequest.getUsername())) {
@@ -116,9 +121,9 @@ public class AgentServiceImpl implements AgentService {
             throw new ApiException("Email already exists: " + createRequest.getEmail(), HttpStatus.CONFLICT);
         }
 
-        // Validate agent number uniqueness within partner
-        if (agentRepository.existsByPartnerAndPartnerAgentNumber(partner, createRequest.getPartnerAgentNumber())) {
-            throw new ApiException("Agent number already exists for this partner: " + createRequest.getPartnerAgentNumber(), HttpStatus.CONFLICT);
+        // Validate agent number uniqueness within group agent
+        if (agentRepository.existsByGroupAgentAndPartnerAgentNumber(groupAgent, createRequest.getPartnerAgentNumber())) {
+            throw new ApiException("Agent number already exists for this group agent: " + createRequest.getPartnerAgentNumber(), HttpStatus.CONFLICT);
         }
 
         // Create Agent entity
@@ -133,7 +138,7 @@ public class AgentServiceImpl implements AgentService {
         agent.setTaxId(createRequest.getTaxId());
         agent.setLicenseNumber(createRequest.getLicenseNumber());
         agent.setAgentType(AgentType.SUPER_AGENT);
-        agent.setPartner(partner);
+        agent.setGroupAgent(groupAgent);
         agent.setNotes(createRequest.getNotes());
         agent.setStatus(AgentStatus.ACTIVE);
         agent.setRegistrationDate(LocalDateTime.now());
@@ -173,6 +178,8 @@ public class AgentServiceImpl implements AgentService {
 
         // Send email notification with credentials
         try {
+            log.info("Creating email notification - Username: {}, DisplayName: {}, Email: {}", 
+                    createRequest.getUsername(), createRequest.getDisplayName(), createRequest.getEmail());
             String subject = "Super Agent Account Created - " + partner.getBusinessName();
             String body = String.format(
                 "Dear %s,\n\n" +
@@ -699,7 +706,7 @@ public class AgentServiceImpl implements AgentService {
         if (agent.getAgentType() == null) {
             return false;
         }
-        if (agent.getPartner() == null) {
+        if (agent.getGroupAgent() == null || agent.getGroupAgent().getPartner() == null) {
             return false;
         }
         return true;
@@ -881,12 +888,14 @@ public class AgentServiceImpl implements AgentService {
     // Private Helper Methods
 
     private void validateUniqueFields(CreateAgentRequestDto createRequest) {
-        // Validate partner agent number uniqueness within partner
-        Partner partner = partnerRepository.findById(createRequest.getPartnerId())
-            .orElseThrow(() -> new ApiException("Partner not found with ID: " + createRequest.getPartnerId(), HttpStatus.NOT_FOUND));
+        // Validate GroupAgent exists and get partner from it
+        GroupAgent groupAgent = groupAgentService.getGroupAgentById(createRequest.getGroupAgentId())
+                .orElseThrow(() -> new ApiException("GroupAgent not found with ID: " + createRequest.getGroupAgentId(), HttpStatus.NOT_FOUND));
         
-        if (agentRepository.existsByPartnerAndPartnerAgentNumber(partner, createRequest.getPartnerAgentNumber())) {
-            throw new ApiException("Partner agent number already exists: " + createRequest.getPartnerAgentNumber(), HttpStatus.CONFLICT);
+        Partner partner = groupAgent.getPartner();
+        
+        if (agentRepository.existsByGroupAgentAndPartnerAgentNumber(groupAgent, createRequest.getPartnerAgentNumber())) {
+            throw new ApiException("Partner agent number already exists for this group agent: " + createRequest.getPartnerAgentNumber(), HttpStatus.CONFLICT);
         }
 
         if (StringUtils.hasText(createRequest.getBusinessEmail()) &&
@@ -900,8 +909,8 @@ public class AgentServiceImpl implements AgentService {
         }
 
         if (StringUtils.hasText(createRequest.getMsisdn()) &&
-            agentRepository.existsByPartnerAndMsisdn(partner, createRequest.getMsisdn())) {
-            throw new ApiException("MSISDN already exists for this partner: " + createRequest.getMsisdn(), HttpStatus.CONFLICT);
+            agentRepository.existsByGroupAgentAndMsisdn(groupAgent, createRequest.getMsisdn())) {
+            throw new ApiException("MSISDN already exists for this group agent: " + createRequest.getMsisdn(), HttpStatus.CONFLICT);
         }
 
         if (StringUtils.hasText(createRequest.getTaxId()) &&
@@ -954,11 +963,11 @@ public class AgentServiceImpl implements AgentService {
         dto.setUpdatedAt(agent.getUpdatedAt());
 
         // Partner information
-        if (agent.getPartner() != null) {
-            dto.setPartnerId(agent.getPartner().getId());
-            dto.setPartnerUid(agent.getPartner().getUid());
-            dto.setPartnerCode(agent.getPartner().getCode());
-            dto.setPartnerBusinessName(agent.getPartner().getBusinessName());
+        if (agent.getGroupAgent() != null && agent.getGroupAgent().getPartner() != null) {
+            dto.setPartnerId(agent.getGroupAgent().getPartner().getId());
+            dto.setPartnerUid(agent.getGroupAgent().getPartner().getUid());
+            dto.setPartnerCode(agent.getGroupAgent().getPartner().getCode());
+            dto.setPartnerBusinessName(agent.getGroupAgent().getPartner().getBusinessName());
         }
 
         // Super agent information
@@ -993,10 +1002,10 @@ public class AgentServiceImpl implements AgentService {
         dto.setRegistrationDate(agent.getRegistrationDate());
 
         // Partner information
-        if (agent.getPartner() != null) {
-            dto.setPartnerId(agent.getPartner().getId());
-            dto.setPartnerCode(agent.getPartner().getCode());
-            dto.setPartnerBusinessName(agent.getPartner().getBusinessName());
+        if (agent.getGroupAgent() != null && agent.getGroupAgent().getPartner() != null) {
+            dto.setPartnerId(agent.getGroupAgent().getPartner().getId());
+            dto.setPartnerCode(agent.getGroupAgent().getPartner().getCode());
+            dto.setPartnerBusinessName(agent.getGroupAgent().getPartner().getBusinessName());
         }
 
         // Super agent information

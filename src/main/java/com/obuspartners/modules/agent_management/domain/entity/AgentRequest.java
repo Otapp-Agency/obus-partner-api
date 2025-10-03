@@ -28,8 +28,8 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "agent_requests",
        uniqueConstraints = {
-           @UniqueConstraint(columnNames = {"partner_id", "partnerAgentNumber"}),
-           @UniqueConstraint(columnNames = {"partner_id", "msisdn"})
+           @UniqueConstraint(columnNames = {"group_agent_id", "partnerAgentNumber"}),
+           @UniqueConstraint(columnNames = {"group_agent_id", "msisdn"})
        })
 public class AgentRequest {
 
@@ -44,6 +44,11 @@ public class AgentRequest {
     @JoinColumn(name = "partner_id", nullable = false)
     @NotNull(message = "Partner is required")
     private Partner partner;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "group_agent_id", nullable = false)
+    @NotNull(message = "Group agent is required")
+    private GroupAgent groupAgent;
 
     @Column(name = "partner_agent_number", nullable = false, length = 50)
     @NotBlank(message = "Partner agent number is required")

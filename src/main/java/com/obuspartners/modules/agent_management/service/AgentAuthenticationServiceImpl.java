@@ -93,7 +93,7 @@ public class AgentAuthenticationServiceImpl implements AgentAuthenticationServic
         Agent agent = agentOpt.get();
 
         // Verify agent belongs to the authenticated partner
-        if (!agent.getPartner().getId().equals(partner.getId())) {
+        if (!agent.getGroupAgent().getPartner().getId().equals(partner.getId())) {
             throw new ApiException("Agent does not belong to the authenticated partner", HttpStatus.FORBIDDEN);
         }
 
@@ -127,13 +127,13 @@ public class AgentAuthenticationServiceImpl implements AgentAuthenticationServic
             .type("Bearer")
             .passName(agent.getPassName())
             .partnerAgentNumber(agent.getPartnerAgentNumber())
-            .partnerCode(agent.getPartner().getCode())
+            .partnerCode(agent.getGroupAgent().getPartner().getCode())
             .email(agent.getBusinessEmail())
             .userType("AGENT")
             .requireResetPassword(false) // Always false for agents
-            .partnerId(agent.getPartner().getId())
-            .partnerUid(agent.getPartner().getUid())
-            .partnerBusinessName(agent.getPartner().getBusinessName())
+            .partnerId(agent.getGroupAgent().getPartner().getId())
+            .partnerUid(agent.getGroupAgent().getPartner().getUid())
+            .partnerBusinessName(agent.getGroupAgent().getPartner().getBusinessName())
             // Essential frontend fields
             .displayName(agent.getUser() != null ? agent.getUser().getDisplayName() : agent.getContactPerson())
             .roles(agent.getUser() != null ? agent.getUser().getRoles().stream().map(role -> role.getRoleType().getValue()).toList() : java.util.List.of())
@@ -296,11 +296,11 @@ public class AgentAuthenticationServiceImpl implements AgentAuthenticationServic
         dto.setUpdatedAt(agent.getUpdatedAt());
 
         // Partner information
-        if (agent.getPartner() != null) {
-            dto.setPartnerId(agent.getPartner().getId());
-            dto.setPartnerUid(agent.getPartner().getUid());
-            dto.setPartnerCode(agent.getPartner().getCode());
-            dto.setPartnerBusinessName(agent.getPartner().getBusinessName());
+        if (agent.getGroupAgent() != null && agent.getGroupAgent().getPartner() != null) {
+            dto.setPartnerId(agent.getGroupAgent().getPartner().getId());
+            dto.setPartnerUid(agent.getGroupAgent().getPartner().getUid());
+            dto.setPartnerCode(agent.getGroupAgent().getPartner().getCode());
+            dto.setPartnerBusinessName(agent.getGroupAgent().getPartner().getBusinessName());
         }
 
         // Super agent information

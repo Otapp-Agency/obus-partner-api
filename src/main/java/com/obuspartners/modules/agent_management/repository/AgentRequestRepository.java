@@ -1,6 +1,7 @@
 package com.obuspartners.modules.agent_management.repository;
 
 import com.obuspartners.modules.agent_management.domain.entity.AgentRequest;
+import com.obuspartners.modules.agent_management.domain.entity.GroupAgent;
 import com.obuspartners.modules.agent_management.domain.enums.AgentRequestStatus;
 import com.obuspartners.modules.partner_management.domain.entity.Partner;
 import org.springframework.data.domain.Page;
@@ -47,6 +48,26 @@ public interface AgentRequestRepository extends JpaRepository<AgentRequest, Long
      * Check if MSISDN exists for a partner
      */
     boolean existsByPartnerAndMsisdn(Partner partner, String msisdn);
+
+    /**
+     * Find agent request by group agent and partner agent number
+     */
+    Optional<AgentRequest> findByGroupAgentAndPartnerAgentNumber(GroupAgent groupAgent, String partnerAgentNumber);
+
+    /**
+     * Find agent request by group agent and MSISDN
+     */
+    Optional<AgentRequest> findByGroupAgentAndMsisdn(GroupAgent groupAgent, String msisdn);
+
+    /**
+     * Check if partner agent number exists for a group agent
+     */
+    boolean existsByGroupAgentAndPartnerAgentNumber(GroupAgent groupAgent, String partnerAgentNumber);
+
+    /**
+     * Check if MSISDN exists for a group agent
+     */
+    boolean existsByGroupAgentAndMsisdn(GroupAgent groupAgent, String msisdn);
 
     /**
      * Find agent requests by status
