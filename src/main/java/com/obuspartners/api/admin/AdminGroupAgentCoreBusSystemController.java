@@ -377,6 +377,37 @@ public class AdminGroupAgentCoreBusSystemController {
     }
 
     /**
+     * Get decrypted credentials for GroupAgentCoreBusSystem
+     */
+    @GetMapping("/uid/{uid}/decrypted-credentials")
+    @Operation(summary = "Get decrypted credentials for GroupAgentCoreBusSystem")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Decrypted credentials retrieved successfully"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized - Admin access required"),
+        @ApiResponse(responseCode = "404", description = "GroupAgentCoreBusSystem not found")
+    })
+    public ResponseEntity<ResponseWrapper<GroupAgentCoreBusSystemService.DecryptedGroupAgentCredentials>> getDecryptedCredentials(
+            @Parameter(description = "GroupAgent UID") @PathVariable String groupAgentUid,
+            @Parameter(description = "GroupAgentCoreBusSystem UID") @PathVariable String uid) {
+        
+        log.info("Getting decrypted credentials for GroupAgentCoreBusSystem with UID: {}", uid);
+        
+        GroupAgentCoreBusSystem groupAgentCoreBusSystem = groupAgentCoreBusSystemService.getGroupAgentCoreBusSystemByUid(uid)
+                .orElseThrow(() -> new ApiException("GroupAgentCoreBusSystem not found with UID: " + uid, HttpStatus.NOT_FOUND));
+        
+        // Verify it belongs to the specified GroupAgent
+        if (!groupAgentCoreBusSystem.getGroupAgent().getUid().equals(groupAgentUid)) {
+            throw new ApiException("GroupAgentCoreBusSystem does not belong to the specified GroupAgent", HttpStatus.BAD_REQUEST);
+        }
+        
+        GroupAgentCoreBusSystemService.DecryptedGroupAgentCredentials credentials = groupAgentCoreBusSystemService
+                .getDecryptedCredentials(groupAgentCoreBusSystem.getGroupAgent(), groupAgentCoreBusSystem.getBusCoreSystem())
+                .orElseThrow(() -> new ApiException("Failed to retrieve decrypted credentials", HttpStatus.INTERNAL_SERVER_ERROR));
+        
+        return ResponseEntity.ok(new ResponseWrapper<>(true, 200, "Decrypted credentials retrieved successfully", credentials));
+    }
+
+    /**
      * Map GroupAgentCoreBusSystem entity to response DTO
      */
     private GroupAgentCoreBusSystemResponseDto mapToResponseDto(GroupAgentCoreBusSystem groupAgentCoreBusSystem) {
