@@ -22,8 +22,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class CreateSuperAgentRequestDto {
     
-    @NotNull(message = "Partner ID is required")
-    private Long partnerId;
+    @NotNull(message = "Group Agent ID is required")
+    private Long groupAgentId;
     
     @NotBlank(message = "Partner agent number is required")
     @Size(max = 50, message = "Partner agent number must not exceed 50 characters")

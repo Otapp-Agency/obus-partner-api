@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.obuspartners.modules.agent_management.domain.entity.Agent;
+import com.obuspartners.modules.agent_management.domain.entity.GroupAgent;
 import com.obuspartners.modules.agent_management.domain.enums.AgentStatus;
 import com.obuspartners.modules.agent_management.domain.enums.AgentType;
 import com.obuspartners.modules.partner_management.domain.entity.Partner;
@@ -42,13 +43,23 @@ public interface AgentRepository extends JpaRepository<Agent, Long> {
     Optional<Agent> findByCode(String code);
 
     /**
-     * Find agent by partner and partner agent number
+     * Find agent by partner and partner agent number (legacy method - use findByGroupAgentAndPartnerAgentNumber)
      * 
      * @param partner the partner entity
      * @param partnerAgentNumber the partner agent number
      * @return Optional containing the agent if found
      */
-    Optional<Agent> findByPartnerAndPartnerAgentNumber(Partner partner, String partnerAgentNumber);
+    @Query("SELECT a FROM Agent a WHERE a.groupAgent.partner = :partner AND a.partnerAgentNumber = :partnerAgentNumber")
+    Optional<Agent> findByPartnerAndPartnerAgentNumber(@Param("partner") Partner partner, @Param("partnerAgentNumber") String partnerAgentNumber);
+
+    /**
+     * Find agent by group agent and partner agent number
+     * 
+     * @param groupAgent the group agent entity
+     * @param partnerAgentNumber the partner agent number
+     * @return Optional containing the agent if found
+     */
+    Optional<Agent> findByGroupAgentAndPartnerAgentNumber(GroupAgent groupAgent, String partnerAgentNumber);
 
     /**
      * Find agent by pass name
@@ -106,7 +117,8 @@ public interface AgentRepository extends JpaRepository<Agent, Long> {
      * @param msisdn the MSISDN
      * @return Optional containing the agent if found
      */
-    Optional<Agent> findByPartnerAndMsisdn(Partner partner, String msisdn);
+    @Query("SELECT a FROM Agent a WHERE a.groupAgent.partner = :partner AND a.msisdn = :msisdn")
+    Optional<Agent> findByPartnerAndMsisdn(@Param("partner") Partner partner, @Param("msisdn") String msisdn);
 
     /**
      * Check if UID exists
@@ -125,13 +137,32 @@ public interface AgentRepository extends JpaRepository<Agent, Long> {
     boolean existsByCode(String code);
 
     /**
-     * Check if partner agent number exists for a partner
+     * Check if partner agent number exists for a partner (legacy method - use existsByGroupAgentAndPartnerAgentNumber)
      * 
      * @param partner the partner entity
      * @param partnerAgentNumber the partner agent number
      * @return true if partner agent number exists for the partner, false otherwise
      */
-    boolean existsByPartnerAndPartnerAgentNumber(Partner partner, String partnerAgentNumber);
+    @Query("SELECT COUNT(a) > 0 FROM Agent a WHERE a.groupAgent.partner = :partner AND a.partnerAgentNumber = :partnerAgentNumber")
+    boolean existsByPartnerAndPartnerAgentNumber(@Param("partner") Partner partner, @Param("partnerAgentNumber") String partnerAgentNumber);
+
+    /**
+     * Check if partner agent number exists for a group agent
+     * 
+     * @param groupAgent the group agent entity
+     * @param partnerAgentNumber the partner agent number
+     * @return true if partner agent number exists for the group agent, false otherwise
+     */
+    boolean existsByGroupAgentAndPartnerAgentNumber(GroupAgent groupAgent, String partnerAgentNumber);
+
+    /**
+     * Check if MSISDN exists for a group agent
+     * 
+     * @param groupAgent the group agent entity
+     * @param msisdn the MSISDN
+     * @return true if MSISDN exists for the group agent, false otherwise
+     */
+    boolean existsByGroupAgentAndMsisdn(GroupAgent groupAgent, String msisdn);
 
     /**
      * Check if pass name exists
@@ -180,7 +211,8 @@ public interface AgentRepository extends JpaRepository<Agent, Long> {
      * @param msisdn the MSISDN
      * @return true if MSISDN exists for the partner, false otherwise
      */
-    boolean existsByPartnerAndMsisdn(Partner partner, String msisdn);
+    @Query("SELECT COUNT(a) > 0 FROM Agent a WHERE a.groupAgent.partner = :partner AND a.msisdn = :msisdn")
+    boolean existsByPartnerAndMsisdn(@Param("partner") Partner partner, @Param("msisdn") String msisdn);
 
     // Partner-related queries
 
@@ -191,7 +223,8 @@ public interface AgentRepository extends JpaRepository<Agent, Long> {
      * @param pageable pagination information
      * @return Page of agents belonging to the partner
      */
-    Page<Agent> findByPartner(Partner partner, Pageable pageable);
+    @Query("SELECT a FROM Agent a WHERE a.groupAgent.partner = :partner")
+    Page<Agent> findByPartner(@Param("partner") Partner partner, Pageable pageable);
 
     /**
      * Find agents by partner ID
@@ -200,7 +233,8 @@ public interface AgentRepository extends JpaRepository<Agent, Long> {
      * @param pageable pagination information
      * @return Page of agents belonging to the partner
      */
-    Page<Agent> findByPartnerId(Long partnerId, Pageable pageable);
+    @Query("SELECT a FROM Agent a WHERE a.groupAgent.partner.id = :partnerId")
+    Page<Agent> findByPartnerId(@Param("partnerId") Long partnerId, Pageable pageable);
 
     /**
      * Count agents by partner
@@ -208,7 +242,8 @@ public interface AgentRepository extends JpaRepository<Agent, Long> {
      * @param partner the partner entity
      * @return number of agents belonging to the partner
      */
-    long countByPartner(Partner partner);
+    @Query("SELECT COUNT(a) FROM Agent a WHERE a.groupAgent.partner = :partner")
+    long countByPartner(@Param("partner") Partner partner);
 
     /**
      * Count agents by partner ID
@@ -216,7 +251,8 @@ public interface AgentRepository extends JpaRepository<Agent, Long> {
      * @param partnerId the partner ID
      * @return number of agents belonging to the partner
      */
-    long countByPartnerId(Long partnerId);
+    @Query("SELECT COUNT(a) FROM Agent a WHERE a.groupAgent.partner.id = :partnerId")
+    long countByPartnerId(@Param("partnerId") Long partnerId);
 
     // Status-related queries
 
@@ -237,7 +273,8 @@ public interface AgentRepository extends JpaRepository<Agent, Long> {
      * @param pageable pagination information
      * @return Page of agents matching both criteria
      */
-    Page<Agent> findByPartnerAndStatus(Partner partner, AgentStatus status, Pageable pageable);
+    @Query("SELECT a FROM Agent a WHERE a.groupAgent.partner = :partner AND a.status = :status")
+    Page<Agent> findByPartnerAndStatus(@Param("partner") Partner partner, @Param("status") AgentStatus status, Pageable pageable);
 
     /**
      * Count agents by status
@@ -254,7 +291,8 @@ public interface AgentRepository extends JpaRepository<Agent, Long> {
      * @param status the agent status
      * @return number of agents matching both criteria
      */
-    long countByPartnerAndStatus(Partner partner, AgentStatus status);
+    @Query("SELECT COUNT(a) FROM Agent a WHERE a.groupAgent.partner = :partner AND a.status = :status")
+    long countByPartnerAndStatus(@Param("partner") Partner partner, @Param("status") AgentStatus status);
 
     // Type-related queries
 
@@ -275,7 +313,8 @@ public interface AgentRepository extends JpaRepository<Agent, Long> {
      * @param pageable pagination information
      * @return Page of agents matching both criteria
      */
-    Page<Agent> findByPartnerAndAgentType(Partner partner, AgentType agentType, Pageable pageable);
+    @Query("SELECT a FROM Agent a WHERE a.groupAgent.partner = :partner AND a.agentType = :agentType")
+    Page<Agent> findByPartnerAndAgentType(@Param("partner") Partner partner, @Param("agentType") AgentType agentType, Pageable pageable);
 
     /**
      * Count agents by type
@@ -320,7 +359,7 @@ public interface AgentRepository extends JpaRepository<Agent, Long> {
      * @param pageable pagination information
      * @return Page of super agents belonging to the partner
      */
-    @Query("SELECT a FROM Agent a WHERE a.partner = :partner AND a.agentType = 'SUPER_AGENT'")
+    @Query("SELECT a FROM Agent a WHERE a.groupAgent.partner = :partner AND a.agentType = 'SUPER_AGENT'")
     Page<Agent> findSuperAgentsByPartner(@Param("partner") Partner partner, Pageable pageable);
 
     /**
@@ -330,7 +369,8 @@ public interface AgentRepository extends JpaRepository<Agent, Long> {
      * @param pageable pagination information
      * @return Page of agents without super agent
      */
-    Page<Agent> findByPartnerAndSuperAgentIsNull(Partner partner, Pageable pageable);
+    @Query("SELECT a FROM Agent a WHERE a.groupAgent.partner = :partner AND a.superAgent IS NULL")
+    Page<Agent> findByPartnerAndSuperAgentIsNull(@Param("partner") Partner partner, Pageable pageable);
 
     // Search and filter queries
 
@@ -383,7 +423,8 @@ public interface AgentRepository extends JpaRepository<Agent, Long> {
      * @param pageable pagination information
      * @return Page of agents matching all criteria
      */
-    Page<Agent> findByPartnerAndStatusAndAgentType(Partner partner, AgentStatus status, AgentType agentType, Pageable pageable);
+    @Query("SELECT a FROM Agent a WHERE a.groupAgent.partner = :partner AND a.status = :status AND a.agentType = :agentType")
+    Page<Agent> findByPartnerAndStatusAndAgentType(@Param("partner") Partner partner, @Param("status") AgentStatus status, @Param("agentType") AgentType agentType, Pageable pageable);
 
     /**
      * Custom query to search agents by multiple criteria
@@ -396,7 +437,7 @@ public interface AgentRepository extends JpaRepository<Agent, Long> {
      * @return Page of agents matching the search criteria
      */
     @Query("SELECT a FROM Agent a WHERE " +
-           "(:partnerId IS NULL OR a.partner.id = :partnerId) AND " +
+           "(:partnerId IS NULL OR a.groupAgent.partner.id = :partnerId) AND " +
            "(:businessName IS NULL OR LOWER(a.businessName) LIKE LOWER(CONCAT('%', :businessName, '%'))) AND " +
            "(:status IS NULL OR a.status = :status) AND " +
            "(:agentType IS NULL OR a.agentType = :agentType)")
@@ -431,7 +472,7 @@ public interface AgentRepository extends JpaRepository<Agent, Long> {
      * @param pageable pagination information
      * @return Page of active agents for the partner
      */
-    @Query("SELECT a FROM Agent a WHERE a.partner = :partner AND a.status = 'ACTIVE'")
+    @Query("SELECT a FROM Agent a WHERE a.groupAgent.partner = :partner AND a.status = 'ACTIVE'")
     Page<Agent> findActiveAgentsByPartner(@Param("partner") Partner partner, Pageable pageable);
 
     /**

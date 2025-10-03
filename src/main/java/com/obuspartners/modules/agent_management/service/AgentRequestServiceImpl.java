@@ -3,6 +3,7 @@ package com.obuspartners.modules.agent_management.service;
 import com.obuspartners.modules.agent_management.domain.dto.*;
 import com.obuspartners.modules.agent_management.domain.entity.Agent;
 import com.obuspartners.modules.agent_management.domain.entity.AgentRequest;
+import com.obuspartners.modules.agent_management.domain.entity.GroupAgent;
 import com.obuspartners.modules.agent_management.domain.entity.PartnerAgentVerification;
 import com.obuspartners.modules.agent_management.domain.enums.AgentRequestStatus;
 import com.obuspartners.modules.agent_management.domain.enums.AgentStatus;
@@ -49,6 +50,7 @@ public class AgentRequestServiceImpl implements AgentRequestService {
     private final AgentRequestRepository agentRequestRepository;
     private final AgentRepository agentRepository;
     private final PartnerRepository partnerRepository;
+    private final GroupAgentService groupAgentService;
     private final PartnerAgentVerificationRepository verificationRepository;
     private final EventProducerService eventProducerService;
     private final PasswordEncoder passwordEncoder;
@@ -60,8 +62,11 @@ public class AgentRequestServiceImpl implements AgentRequestService {
 
         validateUniqueFields(createRequest);
 
-        Partner partner = partnerRepository.findById(createRequest.getPartnerId())
-                .orElseThrow(() -> new ApiException("Partner not found with ID: " + createRequest.getPartnerId(), HttpStatus.NOT_FOUND));
+        // Validate GroupAgent exists and get partner from it
+        GroupAgent groupAgent = groupAgentService.getGroupAgentById(createRequest.getGroupAgentId())
+                .orElseThrow(() -> new ApiException("GroupAgent not found with ID: " + createRequest.getGroupAgentId(), HttpStatus.NOT_FOUND));
+        
+        Partner partner = groupAgent.getPartner();
 
         Agent superAgent = null;
         if (createRequest.getSuperAgentId() != null) {
@@ -73,6 +78,7 @@ public class AgentRequestServiceImpl implements AgentRequestService {
 
         AgentRequest agentRequest = new AgentRequest();
         agentRequest.setPartner(partner);
+        agentRequest.setGroupAgent(groupAgent);
         agentRequest.setPartnerAgentNumber(createRequest.getPartnerAgentNumber());
         agentRequest.setBusinessName(createRequest.getBusinessName());
         agentRequest.setContactPerson(createRequest.getContactPerson());
@@ -282,16 +288,19 @@ public class AgentRequestServiceImpl implements AgentRequestService {
 
     // Helper methods
     private void validateUniqueFields(CreateAgentRequestDto createRequest) {
-        Partner partner = partnerRepository.findById(createRequest.getPartnerId())
-                .orElseThrow(() -> new ApiException("Partner not found", HttpStatus.NOT_FOUND));
+        // Validate GroupAgent exists and get partner from it
+        GroupAgent groupAgent = groupAgentService.getGroupAgentById(createRequest.getGroupAgentId())
+                .orElseThrow(() -> new ApiException("GroupAgent not found with ID: " + createRequest.getGroupAgentId(), HttpStatus.NOT_FOUND));
+        
+        Partner partner = groupAgent.getPartner();
 
-        if (agentRequestRepository.existsByPartnerAndPartnerAgentNumber(partner, createRequest.getPartnerAgentNumber())) {
-            throw new ApiException("Partner agent number already exists for this partner: " + createRequest.getPartnerAgentNumber(), HttpStatus.CONFLICT);
+        if (agentRequestRepository.existsByGroupAgentAndPartnerAgentNumber(groupAgent, createRequest.getPartnerAgentNumber())) {
+            throw new ApiException("Partner agent number already exists for this group agent: " + createRequest.getPartnerAgentNumber(), HttpStatus.CONFLICT);
         }
 
         if (StringUtils.hasText(createRequest.getMsisdn()) &&
-            agentRequestRepository.existsByPartnerAndMsisdn(partner, createRequest.getMsisdn())) {
-            throw new ApiException("MSISDN already exists for this partner: " + createRequest.getMsisdn(), HttpStatus.CONFLICT);
+            agentRequestRepository.existsByGroupAgentAndMsisdn(groupAgent, createRequest.getMsisdn())) {
+            throw new ApiException("MSISDN already exists for this group agent: " + createRequest.getMsisdn(), HttpStatus.CONFLICT);
         }
     }
 
@@ -327,7 +336,8 @@ public class AgentRequestServiceImpl implements AgentRequestService {
         agent.setTaxId(agentRequest.getTaxId());
         agent.setLicenseNumber(agentRequest.getLicenseNumber());
         agent.setAgentType(agentRequest.getAgentType());
-        agent.setPartner(agentRequest.getPartner());
+        // TODO: Set GroupAgent instead of Partner directly
+        // agent.setGroupAgent(groupAgent); // This needs to be implemented when GroupAgent service is ready
         agent.setSuperAgent(agentRequest.getSuperAgent());
         agent.setNotes(agentRequest.getNotes());
         agent.setStatus(AgentStatus.ACTIVE);
