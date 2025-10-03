@@ -27,6 +27,12 @@ public class UpdateGroupAgentCoreBusSystemRequest {
     @Size(max = 255, message = "Password must not exceed 255 characters")
     private String password;
 
+    @Size(max = 100, message = "Transaction username must not exceed 100 characters")
+    private String txnUserName;
+
+    @Size(max = 255, message = "Transaction password must not exceed 255 characters")
+    private String txnPassword;
+
     @Size(max = 500, message = "API key must not exceed 500 characters")
     private String apiKey;
 

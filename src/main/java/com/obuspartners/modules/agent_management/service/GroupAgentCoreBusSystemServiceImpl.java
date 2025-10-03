@@ -42,6 +42,8 @@ public class GroupAgentCoreBusSystemServiceImpl implements GroupAgentCoreBusSyst
             String externalAgentIdentifier,
             String username,
             String password,
+            String txnUserName,
+            String txnPassword,
             String apiKey,
             String apiSecret,
             boolean isPrimary) {
@@ -79,6 +81,8 @@ public class GroupAgentCoreBusSystemServiceImpl implements GroupAgentCoreBusSyst
         groupAgentCoreBusSystem.setExternalAgentIdentifier(externalAgentIdentifier);
         groupAgentCoreBusSystem.setUsername(username);
         groupAgentCoreBusSystem.setPassword(passwordEncoder.encode(password));
+        groupAgentCoreBusSystem.setTxnUserName(txnUserName);
+        groupAgentCoreBusSystem.setTxnPassword(txnPassword != null ? passwordEncoder.encode(txnPassword) : null);
         groupAgentCoreBusSystem.setApiKey(apiKey != null ? passwordEncoder.encode(apiKey) : null);
         groupAgentCoreBusSystem.setApiSecret(apiSecret != null ? passwordEncoder.encode(apiSecret) : null);
         groupAgentCoreBusSystem.setIsActive(true);
@@ -391,6 +395,7 @@ public class GroupAgentCoreBusSystemServiceImpl implements GroupAgentCoreBusSyst
         // Note: BCrypt passwords cannot be decrypted, so we return the encrypted password
         // In a real implementation, you might want to use a different encryption service for API keys
         String decryptedPassword = groupAgentCoreBusSystem.getPassword(); // BCrypt cannot be decrypted
+        String decryptedTxnPassword = groupAgentCoreBusSystem.getTxnPassword(); // BCrypt cannot be decrypted
         String decryptedApiKey = groupAgentCoreBusSystem.getApiKey(); // Assuming plain text for API keys
         String decryptedApiSecret = groupAgentCoreBusSystem.getApiSecret(); // Assuming plain text for API secrets
         String decryptedAccessToken = groupAgentCoreBusSystem.getAccessToken(); // Assuming plain text for tokens
@@ -399,6 +404,8 @@ public class GroupAgentCoreBusSystemServiceImpl implements GroupAgentCoreBusSyst
         DecryptedGroupAgentCredentials credentials = new DecryptedGroupAgentCredentials(
             groupAgentCoreBusSystem.getUsername(),
             decryptedPassword,
+            groupAgentCoreBusSystem.getTxnUserName(),
+            decryptedTxnPassword,
             decryptedApiKey,
             decryptedApiSecret,
             decryptedAccessToken,

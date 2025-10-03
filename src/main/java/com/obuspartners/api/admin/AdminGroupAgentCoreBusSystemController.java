@@ -78,6 +78,8 @@ public class AdminGroupAgentCoreBusSystemController {
                 request.getExternalAgentIdentifier(),
                 request.getUsername(),
                 request.getPassword(),
+                request.getTxnUserName(),
+                request.getTxnPassword(),
                 request.getApiKey(),
                 request.getApiSecret(),
                 request.getIsPrimary()
