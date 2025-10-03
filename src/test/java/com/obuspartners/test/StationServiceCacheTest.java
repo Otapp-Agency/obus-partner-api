@@ -11,7 +11,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.obuspartners.modules.partner_integration.stations.StationServiceImpl;
+import com.obuspartners.modules.partner_integration.bmslg.agent_v8.stations.BmsLgStationServiceImpl;
 
 /**
  * Test class to verify station caching functionality
@@ -23,7 +23,7 @@ import com.obuspartners.modules.partner_integration.stations.StationServiceImpl;
 class StationServiceCacheTest {
 
     @InjectMocks
-    private StationServiceImpl stationService;
+    private BmsLgStationServiceImpl stationService;
 
     @BeforeEach
     void setUp() {

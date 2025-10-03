@@ -1,8 +1,8 @@
-package com.obuspartners.modules.partner_integration.stations;
+package com.obuspartners.modules.partner_integration.bmslg.agent_v8.stations;
 
 import java.util.Map;
 
-public interface StationService {
+public interface BmsLgStationService {
 
     public Object fetchAllStations();
     

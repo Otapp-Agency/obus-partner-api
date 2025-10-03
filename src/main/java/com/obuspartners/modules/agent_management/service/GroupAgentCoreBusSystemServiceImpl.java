@@ -6,7 +6,7 @@ import com.obuspartners.modules.agent_management.repository.GroupAgentCoreBusSys
 import com.obuspartners.modules.agent_management.repository.GroupAgentRepository;
 import com.obuspartners.modules.bus_core_system.domain.entity.BusCoreSystem;
 import com.obuspartners.modules.bus_core_system.repository.BusCoreSystemRepository;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import com.obuspartners.modules.common.service.PasswordEncryptionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -33,7 +33,7 @@ public class GroupAgentCoreBusSystemServiceImpl implements GroupAgentCoreBusSyst
     private final GroupAgentCoreBusSystemRepository groupAgentCoreBusSystemRepository;
     private final GroupAgentRepository groupAgentRepository;
     private final BusCoreSystemRepository busCoreSystemRepository;
-    private final PasswordEncoder passwordEncoder;
+    private final PasswordEncryptionService passwordEncryptionService;
 
     @Override
     public GroupAgentCoreBusSystem assignGroupAgentToBusCoreSystem(
@@ -80,11 +80,11 @@ public class GroupAgentCoreBusSystemServiceImpl implements GroupAgentCoreBusSyst
         groupAgentCoreBusSystem.setBusCoreSystem(loadedBusCoreSystem);
         groupAgentCoreBusSystem.setExternalAgentIdentifier(externalAgentIdentifier);
         groupAgentCoreBusSystem.setUsername(username);
-        groupAgentCoreBusSystem.setPassword(passwordEncoder.encode(password));
+        groupAgentCoreBusSystem.setPassword(passwordEncryptionService.encryptPassword(password));
         groupAgentCoreBusSystem.setTxnUserName(txnUserName);
-        groupAgentCoreBusSystem.setTxnPassword(txnPassword != null ? passwordEncoder.encode(txnPassword) : null);
-        groupAgentCoreBusSystem.setApiKey(apiKey != null ? passwordEncoder.encode(apiKey) : null);
-        groupAgentCoreBusSystem.setApiSecret(apiSecret != null ? passwordEncoder.encode(apiSecret) : null);
+        groupAgentCoreBusSystem.setTxnPassword(txnPassword != null ? passwordEncryptionService.encryptPassword(txnPassword) : null);
+        groupAgentCoreBusSystem.setApiKey(apiKey != null ? passwordEncryptionService.encryptPassword(apiKey) : null);
+        groupAgentCoreBusSystem.setApiSecret(apiSecret != null ? passwordEncryptionService.encryptPassword(apiSecret) : null);
         groupAgentCoreBusSystem.setIsActive(true);
         groupAgentCoreBusSystem.setIsPrimary(isPrimary);
         groupAgentCoreBusSystem.setExternalSystemStatus("ACTIVE");
@@ -124,13 +124,13 @@ public class GroupAgentCoreBusSystemServiceImpl implements GroupAgentCoreBusSyst
             groupAgentCoreBusSystem.setUsername(username);
         }
         if (password != null) {
-            groupAgentCoreBusSystem.setPassword(passwordEncoder.encode(password));
+            groupAgentCoreBusSystem.setPassword(passwordEncryptionService.encryptPassword(password));
         }
         if (apiKey != null) {
-            groupAgentCoreBusSystem.setApiKey(passwordEncoder.encode(apiKey));
+            groupAgentCoreBusSystem.setApiKey(passwordEncryptionService.encryptPassword(apiKey));
         }
         if (apiSecret != null) {
-            groupAgentCoreBusSystem.setApiSecret(passwordEncoder.encode(apiSecret));
+            groupAgentCoreBusSystem.setApiSecret(passwordEncryptionService.encryptPassword(apiSecret));
         }
         
         return groupAgentCoreBusSystemRepository.save(groupAgentCoreBusSystem);
@@ -147,13 +147,13 @@ public class GroupAgentCoreBusSystemServiceImpl implements GroupAgentCoreBusSyst
             groupAgentCoreBusSystem.setUsername(username);
         }
         if (password != null) {
-            groupAgentCoreBusSystem.setPassword(passwordEncoder.encode(password));
+            groupAgentCoreBusSystem.setPassword(passwordEncryptionService.encryptPassword(password));
         }
         if (apiKey != null) {
-            groupAgentCoreBusSystem.setApiKey(passwordEncoder.encode(apiKey));
+            groupAgentCoreBusSystem.setApiKey(passwordEncryptionService.encryptPassword(apiKey));
         }
         if (apiSecret != null) {
-            groupAgentCoreBusSystem.setApiSecret(passwordEncoder.encode(apiSecret));
+            groupAgentCoreBusSystem.setApiSecret(passwordEncryptionService.encryptPassword(apiSecret));
         }
         
         return groupAgentCoreBusSystemRepository.save(groupAgentCoreBusSystem);
@@ -368,8 +368,9 @@ public class GroupAgentCoreBusSystemServiceImpl implements GroupAgentCoreBusSyst
         GroupAgentCoreBusSystem groupAgentCoreBusSystem = groupAgentCoreBusSystemOpt.get();
         
         // Check username and password
+        String decryptedPassword = passwordEncryptionService.decryptPassword(groupAgentCoreBusSystem.getPassword());
         if (!username.equals(groupAgentCoreBusSystem.getUsername()) || 
-            !passwordEncoder.matches(password, groupAgentCoreBusSystem.getPassword())) {
+            !password.equals(decryptedPassword)) {
             return false;
         }
         
@@ -392,12 +393,14 @@ public class GroupAgentCoreBusSystemServiceImpl implements GroupAgentCoreBusSyst
         
         GroupAgentCoreBusSystem groupAgentCoreBusSystem = groupAgentCoreBusSystemOpt.get();
         
-        // Note: BCrypt passwords cannot be decrypted, so we return the encrypted password
-        // In a real implementation, you might want to use a different encryption service for API keys
-        String decryptedPassword = groupAgentCoreBusSystem.getPassword(); // BCrypt cannot be decrypted
-        String decryptedTxnPassword = groupAgentCoreBusSystem.getTxnPassword(); // BCrypt cannot be decrypted
-        String decryptedApiKey = groupAgentCoreBusSystem.getApiKey(); // Assuming plain text for API keys
-        String decryptedApiSecret = groupAgentCoreBusSystem.getApiSecret(); // Assuming plain text for API secrets
+        // Decrypt passwords for use by external systems
+        String decryptedPassword = passwordEncryptionService.decryptPassword(groupAgentCoreBusSystem.getPassword());
+        String decryptedTxnPassword = groupAgentCoreBusSystem.getTxnPassword() != null ? 
+            passwordEncryptionService.decryptPassword(groupAgentCoreBusSystem.getTxnPassword()) : null;
+        String decryptedApiKey = groupAgentCoreBusSystem.getApiKey() != null ? 
+            passwordEncryptionService.decryptPassword(groupAgentCoreBusSystem.getApiKey()) : null;
+        String decryptedApiSecret = groupAgentCoreBusSystem.getApiSecret() != null ? 
+            passwordEncryptionService.decryptPassword(groupAgentCoreBusSystem.getApiSecret()) : null;
         String decryptedAccessToken = groupAgentCoreBusSystem.getAccessToken(); // Assuming plain text for tokens
         String decryptedRefreshToken = groupAgentCoreBusSystem.getRefreshToken(); // Assuming plain text for tokens
         
