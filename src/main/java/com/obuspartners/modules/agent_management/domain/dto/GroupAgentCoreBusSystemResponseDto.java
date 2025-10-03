@@ -25,6 +25,7 @@ public class GroupAgentCoreBusSystemResponseDto {
     // External system identification
     private String externalAgentIdentifier;
     private String username;
+    private String txnUserName;
     
     // Configuration and status
     private Boolean isActive;

@@ -25,6 +25,8 @@ public interface GroupAgentCoreBusSystemService {
      * @param externalAgentIdentifier the external agent identifier
      * @param username the username
      * @param password the password (will be encrypted)
+     * @param txnUserName the transaction username (optional)
+     * @param txnPassword the transaction password (optional, will be encrypted)
      * @param apiKey the API key (optional)
      * @param apiSecret the API secret (optional)
      * @param isPrimary whether this is the primary bus core system
@@ -36,6 +38,8 @@ public interface GroupAgentCoreBusSystemService {
             String externalAgentIdentifier,
             String username,
             String password,
+            String txnUserName,
+            String txnPassword,
             String apiKey,
             String apiSecret,
             boolean isPrimary
@@ -303,14 +307,18 @@ public interface GroupAgentCoreBusSystemService {
     class DecryptedGroupAgentCredentials {
         private String username;
         private String password;
+        private String txnUserName;
+        private String txnPassword;
         private String apiKey;
         private String apiSecret;
         private String accessToken;
         private String refreshToken;
 
-        public DecryptedGroupAgentCredentials(String username, String password, String apiKey, String apiSecret, String accessToken, String refreshToken) {
+        public DecryptedGroupAgentCredentials(String username, String password, String txnUserName, String txnPassword, String apiKey, String apiSecret, String accessToken, String refreshToken) {
             this.username = username;
             this.password = password;
+            this.txnUserName = txnUserName;
+            this.txnPassword = txnPassword;
             this.apiKey = apiKey;
             this.apiSecret = apiSecret;
             this.accessToken = accessToken;
@@ -320,6 +328,8 @@ public interface GroupAgentCoreBusSystemService {
         // Getters
         public String getUsername() { return username; }
         public String getPassword() { return password; }
+        public String getTxnUserName() { return txnUserName; }
+        public String getTxnPassword() { return txnPassword; }
         public String getApiKey() { return apiKey; }
         public String getApiSecret() { return apiSecret; }
         public String getAccessToken() { return accessToken; }

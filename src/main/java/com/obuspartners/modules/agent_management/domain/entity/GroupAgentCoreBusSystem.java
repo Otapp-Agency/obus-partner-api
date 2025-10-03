@@ -63,6 +63,14 @@ public class GroupAgentCoreBusSystem {
     @Size(max = 255, message = "Password must not exceed 255 characters")
     private String password; // Encrypted password
 
+    @Column(name = "txn_username")
+    @Size(max = 100, message = "Transaction username must not exceed 100 characters")
+    private String txnUserName; // Transaction username
+
+    @Column(name = "txn_password")
+    @Size(max = 255, message = "Transaction password must not exceed 255 characters")
+    private String txnPassword; // Encrypted transaction password
+
     @Column(name = "api_key")
     @Size(max = 500, message = "API key must not exceed 500 characters")
     private String apiKey; // Encrypted API key
@@ -168,6 +176,11 @@ public class GroupAgentCoreBusSystem {
     public boolean hasValidCredentials() {
         return username != null && !username.trim().isEmpty() && 
                password != null && !password.trim().isEmpty();
+    }
+
+    public boolean hasTransactionCredentials() {
+        return txnUserName != null && !txnUserName.trim().isEmpty() && 
+               txnPassword != null && !txnPassword.trim().isEmpty();
     }
 
     public boolean hasApiCredentials() {
