@@ -8,6 +8,7 @@ import com.obuspartners.modules.partner_integration.bmslg.agent_v8.buses.BmsLgBu
 import com.obuspartners.modules.partner_integration.bmslg.agent_v8.seat_map.BmsLgSeatMapService;
 import com.obuspartners.modules.partner_integration.bmslg.agent_v8.seat.BmsLgSeatService;
 import com.obuspartners.modules.partner_integration.bmslg.agent_v8.booking.BmsLgBookSeatService;
+import com.obuspartners.modules.partner_integration.bmslg.agent_v8.dto.BmsLgBookSeatRequestDto;
 import com.obuspartners.modules.partner_integration.bmslg.agent_v8.dto.BmsLgProcessSeatRequestDto;
 import com.obuspartners.modules.agent_management.service.AgentAuthenticationService;
 import com.obuspartners.modules.agent_management.service.AgentBusCoreSystemService;
@@ -292,9 +293,9 @@ public class PartnerAgentApiController {
      */
     @Operation(summary = "Book Seat", description = "Book seat from BMSLG system - requires both partner API key authentication and agent JWT authentication")
     @PostMapping("/seat/book")
-    public ResponseEntity<Object> bookSeat(HttpServletRequest request) {
+    public ResponseEntity<Object> bookSeat(@RequestBody BmsLgBookSeatRequestDto bookingRequest, HttpServletRequest request) {
         log.info("Book seat endpoint called for Partner Agent API");
-        Object bookingData = bmsLgBookSeatService.bookSeat();
+        Object bookingData = bmsLgBookSeatService.createBookingRequest(bookingRequest);
         return ResponseEntity.ok(bookingData);
     }
 

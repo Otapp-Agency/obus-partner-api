@@ -10,10 +10,16 @@ import com.obuspartners.modules.agent_management.domain.dto.AgentLoginRequestDto
 import com.obuspartners.modules.agent_management.domain.dto.AgentLoginResponseDto;
 import com.obuspartners.modules.agent_management.domain.dto.AgentResponseDto;
 import com.obuspartners.modules.agent_management.domain.entity.Agent;
+import com.obuspartners.modules.agent_management.domain.entity.GroupAgent;
+import com.obuspartners.modules.agent_management.domain.entity.GroupAgentCoreBusSystem;
 import com.obuspartners.modules.agent_management.domain.enums.AgentStatus;
 import com.obuspartners.modules.agent_management.repository.AgentRepository;
+import com.obuspartners.modules.agent_management.repository.GroupAgentCoreBusSystemRepository;
+import com.obuspartners.modules.agent_management.repository.GroupAgentRepository;
 import com.obuspartners.modules.common.exception.ApiException;
 import com.obuspartners.modules.auth_management.util.JwtUtil;
+import com.obuspartners.modules.bus_core_system.domain.entity.BusCoreSystem;
+import com.obuspartners.modules.bus_core_system.repository.BusCoreSystemRepository;
 import com.obuspartners.modules.partner_management.service.PartnerApiKeyService;
 import com.obuspartners.modules.partner_management.domain.entity.Partner;
 import com.obuspartners.modules.partner_management.repository.PartnerRepository;
@@ -44,6 +50,10 @@ public class AgentAuthenticationServiceImpl implements AgentAuthenticationServic
     private final PartnerApiKeyService partnerApiKeyService;
     private final PartnerRepository partnerRepository;
     private final PasswordEncoder passwordEncoder;
+
+    private final GroupAgentRepository groupAgentRepository;
+    private final BusCoreSystemRepository busCoreSystemRepository;
+    private final GroupAgentCoreBusSystemRepository groupAgentCoreBusSystemRepository;
 
     @Override
     @Transactional
@@ -112,6 +122,13 @@ public class AgentAuthenticationServiceImpl implements AgentAuthenticationServic
         agent.setLastActivityDate(LocalDateTime.now());
         agentRepository.save(agent);
 
+        GroupAgent groupAgent = agent.getGroupAgent();
+        BusCoreSystem busCoreSystem = busCoreSystemRepository.findByCodeAndIsDeletedFalse("BMSLG").orElseThrow(() -> new ApiException("Bus Service not available", HttpStatus.NOT_FOUND));
+        GroupAgentCoreBusSystem groupAgentCoreBusSystem = groupAgentCoreBusSystemRepository.findByGroupAgentAndBusCoreSystem(groupAgent, busCoreSystem).orElseThrow(() -> new ApiException("Agent not assigned to bus service", HttpStatus.NOT_FOUND));
+
+        if(groupAgentCoreBusSystem.getExternalAgentId() == null){
+            throw new ApiException("Agent not recognise by bus service", HttpStatus.UNPROCESSABLE_ENTITY);
+        }
         // Generate JWT tokens
         // Always generate full access token for agents (no password change requirement)
         String accessToken = generateAgentAccessToken(agent);
@@ -141,6 +158,7 @@ public class AgentAuthenticationServiceImpl implements AgentAuthenticationServic
             .agentId(agent.getId())
             .agentStatus(agent.getStatus().name())
             .lastLoginAt(agent.getLastActivityDate() != null ? java.time.format.DateTimeFormatter.ofPattern("yyyy:MM:dd HH:mm:ss").format(agent.getLastActivityDate()) : null)
+            .bmsLgAgentId(groupAgentCoreBusSystem.getExternalAgentId())
             .build();
     }
 

@@ -38,4 +38,5 @@ public class AgentLoginResponseDto {
     private Long agentId;
     private String agentStatus;
     private String lastLoginAt;
+    private String bmsLgAgentId;
 }
