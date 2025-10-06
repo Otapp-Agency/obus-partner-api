@@ -30,13 +30,17 @@ public class PaymentEventConsumer {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
-    @Value("${mixx.payment.api.url:https://accessgwtest.tigo.co.tz:8443/api/v1/payment}")
+    //https://a73b4e89473e.ngrok-free.app
+    @Value("${mixx.payment.api.url:https://a73b4e89473e.ngrok-free.app}")
+    //@Value("${mixx.payment.api.url:https://accessgwtest.tigo.co.tz:8443/api/v1/payment}")
     private String mixxPaymentApiUrl;
 
     @Value("${mixx.payment.api.key:c3VwZXJhcHByMnAtMUQkVSZsY0hhWEI3a0IhT2hSMUpLQnEyZDVCT1VUbmRmMkVwUGRWUG9EZ0tFa0do}")
+    //@Value("${mixx.payment.api.key:c3VwZXJhcHByMnAtMUQkVSZsY0hhWEI3a0IhT2hSMUpLQnEyZDVCT1VUbmRmMkVwUGRWUG9EZ0tFa0do}")
     private String mixxApiKey;
 
-    @Value("${mixx.payment.user.id:UserId}")
+    @Value("${mixx.payment.user.id:otappagent}")
+    //@Value("${mixx.payment.user.id:UserId}")
     private String mixxUserId;
 
     @Value("${mixx.payment.biller.msisdn:25565150888}")
@@ -119,9 +123,15 @@ public class PaymentEventConsumer {
             Map<String, Object> paymentRequest = new HashMap<>();
             paymentRequest.put("CustomerMSISDN", event.getCustomerPhone());
             paymentRequest.put("BillerMSISDN", billerMsisdn);
-            paymentRequest.put("Amount", event.getAmount().multiply(new BigDecimal("100")).intValue()); // Convert to cents
+            // Convert amount based on currency (TZS doesn't have cents, USD does)
+            int amountInSmallestUnit = event.getCurrency().equals("TZS") 
+                ? event.getAmount().intValue()  // TZS: use amount as-is
+                : event.getAmount().multiply(new BigDecimal("100")).intValue(); // USD: convert to cents
+            paymentRequest.put("Amount", amountInSmallestUnit);
             paymentRequest.put("ReferenceID", event.getPaymentProviderReference());
 
+            log.info("Amount conversion - Original: {} {}, Converted: {} (currency: {})", 
+                    event.getAmount(), event.getCurrency(), amountInSmallestUnit, event.getCurrency());
             log.info("MIXX payment request: {}", paymentRequest);
 
             // Prepare headers

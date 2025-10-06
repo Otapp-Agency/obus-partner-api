@@ -37,7 +37,7 @@ public class MixxPublicController {
      * @param callbackRequest MIXX callback request
      * @return MIXX callback response
      */
-    @PostMapping("/callback")
+    @PostMapping("/biller/callback")
     public ResponseEntity<MixxCallbackResponse> handlePaymentCallback(
             @RequestBody MixxCallbackRequest callbackRequest) {
         

@@ -56,6 +56,7 @@ public class SecurityConfig {
                 .requestMatchers("/v1/auth/login", "/v1/auth/register", "/v1/auth/refresh", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                 .requestMatchers("/v1/auth/agent/login").permitAll()
                 .requestMatchers("/v1/partners/public/**").permitAll()
+                .requestMatchers("/public/**").permitAll() // Allow all public endpoints including MIXX payment callbacks
                 .requestMatchers("/demo/kafka/**", "/demo/email/**").permitAll() // Allow demo Kafka and email endpoints without authentication
                 .requestMatchers("/partner/v1/agents/register-self", "/api/partner/v1/agents/register-self").permitAll() // Allow agent self-registration with API key validation only
                 .requestMatchers("/partner/v1/agent-api/**", "/api/partner/v1/agent-api/**").hasRole("AGENT") // Require agent role for agent API endpoints
