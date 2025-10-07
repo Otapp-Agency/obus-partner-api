@@ -15,13 +15,16 @@ import java.util.regex.Pattern;
 
 import org.springframework.stereotype.Service;
 
+import com.obuspartners.modules.partner_integration.bmslg.agent_v8.dto.BmsLgSeatMapRequestDto;
 import lombok.extern.slf4j.Slf4j;
 
 /**
  * Service implementation for fetching seat map data from BMSLG API.
  * 
- * This service implements the Seat-Map functionality as specified in the PHP script,
- * including proper authentication key generation, validation, and numeric field validation.
+ * This service implements the Seat-Map functionality as specified in the PHP
+ * script,
+ * including proper authentication key generation, validation, and numeric field
+ * validation.
  * 
  * @author OBUS Team
  * @version 1.0.0
@@ -36,33 +39,38 @@ public class BmsLgSeatMapServiceImpl implements BmsLgSeatMapService {
     private static final Pattern NUMERIC_PATTERN = Pattern.compile("^[0-9]+$");
 
     @Override
-    public Object getSeatMap() {
-        log.info("Fetching seat map data from BMSLG");
+    public Object getSeatMap(BmsLgSeatMapRequestDto requestDto) {
+        log.info("Fetching seat map data from BMSLG with request parameters");
         try {
-            // Generate random auth key (1-4, excluding RIPEMD160)
-            Random random = new Random();
-            int authKey = random.nextInt(4) + 1; // Random between 1-4
+            // Use auth key from request or generate random one
+            int authKey;
+            if (requestDto.getAuthKey() != null && !requestDto.getAuthKey().isEmpty()) {
+                authKey = Integer.parseInt(requestDto.getAuthKey());
+            } else {
+                Random random = new Random();
+                authKey = random.nextInt(4) + 1; // Random between 1-4
+            }
 
-            // Prepare POST data as per PHP script
+            // Prepare POST data from request DTO
             Map<String, String> postData = new HashMap<>();
-            postData.put("owner_id", "64");
-            postData.put("agent_id", "3643");
+            postData.put("owner_id", requestDto.getOwnerId() != null ? requestDto.getOwnerId() : "64");
+            postData.put("agent_id", requestDto.getAgentId() != null ? requestDto.getAgentId() : "3643");
             postData.put("auth_key", String.valueOf(authKey));
-            postData.put("imei", "123456789012345");
-            postData.put("lat", "0.0");
-            postData.put("long", "0.0");
-            postData.put("ip", "192.168.0.101");
-            postData.put("sub_id", "1454462"); // Subroute ID
-            postData.put("tdi_id", "298024896"); // Travel Date Info ID
-            postData.put("lb_id", "1913"); // Logical Bus ID
-            postData.put("pbi_id", "125"); // Passenger Booking Info ID
-            postData.put("asi_id", "284766513"); // Available Seat Info ID
-            postData.put("apbi_id", "198519"); // Additional Physical Bus Info ID
+            postData.put("imei", requestDto.getImei() != null ? requestDto.getImei() : "");
+            postData.put("lat", requestDto.getLat() != null ? requestDto.getLat() : "0.0");
+            postData.put("long", requestDto.getLongitude() != null ? requestDto.getLongitude() : "0.0");
+            postData.put("ip", requestDto.getIp() != null ? requestDto.getIp() : "192.168.0.101");
+            postData.put("sub_id", requestDto.getSubId() != null ? requestDto.getSubId() : "1454462");
+            postData.put("tdi_id", requestDto.getTdiId() != null ? requestDto.getTdiId() : "367172190");
+            postData.put("lb_id", requestDto.getLbId() != null ? requestDto.getLbId() : "9772");
+            postData.put("pbi_id", requestDto.getPbiId() != null ? requestDto.getPbiId() : "125");
+            postData.put("asi_id", requestDto.getAsiId() != null ? requestDto.getAsiId() : "364949203");
+            postData.put("apbi_id", requestDto.getApbiId() != null ? requestDto.getApbiId() : "198519");
             postData.put("key", ""); // Will be calculated
-            postData.put("app_ver", "4.88");
-            postData.put("is_from", "4"); // 0-4
-            postData.put("pltfm", "0"); // 0=ANDROID AGENT NORMAL, 1=ANDROID AGENT SPECIAL, etc.
-            postData.put("lang", "0"); // 0=English, 1=Swahili
+            postData.put("app_ver", requestDto.getAppVer() != null ? requestDto.getAppVer() : "5.00");
+            postData.put("is_from", requestDto.getIsFrom() != null ? requestDto.getIsFrom() : "4");
+            postData.put("pltfm", requestDto.getPltfm() != null ? requestDto.getPltfm() : "0");
+            postData.put("lang", requestDto.getLang() != null ? requestDto.getLang() : "1");
 
             // Validate numeric fields
             if (!validateNumericFields(postData)) {
@@ -73,19 +81,23 @@ public class BmsLgSeatMapServiceImpl implements BmsLgSeatMapService {
             Map<String, String> getData = new HashMap<>();
             getData.put("key", ""); // Will be calculated
 
-            // Calculate GET key: encrypt(auth_key, md5(sha512(agent_id + owner_id + auth_key + "5e@tMp")))
-            String getKeyInput = postData.get("agent_id") + postData.get("owner_id") + postData.get("auth_key") + SEAT_MAP_SALT;
+            // Calculate GET key: encrypt(auth_key, md5(sha512(agent_id + owner_id +
+            // auth_key + "5e@tMp")))
+            String getKeyInput = postData.get("agent_id") + postData.get("owner_id") + postData.get("auth_key")
+                    + SEAT_MAP_SALT;
             String getKeyString = md5(sha512(getKeyInput));
             String getKey = encrypt(authKey, getKeyString);
             getData.put("key", getKey);
 
-            // Calculate POST key: encrypt(auth_key, md5(sha512(owner_id + agent_id + sub_id + tdi_id + lb_id + pbi_id + asi_id + imei + lat + long + ip + auth_key + is_from + pltfm + lang + apbi_id + "M@p5e@t")))
-            String postKeyInput = postData.get("owner_id") + postData.get("agent_id") + postData.get("sub_id") + 
-                                postData.get("tdi_id") + postData.get("lb_id") + postData.get("pbi_id") + 
-                                postData.get("asi_id") + postData.get("imei") + postData.get("lat") + 
-                                postData.get("long") + postData.get("ip") + postData.get("auth_key") + 
-                                postData.get("is_from") + postData.get("pltfm") + postData.get("lang") + 
-                                postData.get("apbi_id") + SEAT_MAP_POST_SALT;
+            // Calculate POST key: encrypt(auth_key, md5(sha512(owner_id + agent_id + sub_id
+            // + tdi_id + lb_id + pbi_id + asi_id + imei + lat + long + ip + auth_key +
+            // is_from + pltfm + lang + apbi_id + "M@p5e@t")))
+            String postKeyInput = postData.get("owner_id") + postData.get("agent_id") + postData.get("sub_id") +
+                    postData.get("tdi_id") + postData.get("lb_id") + postData.get("pbi_id") +
+                    postData.get("asi_id") + postData.get("imei") + postData.get("lat") +
+                    postData.get("long") + postData.get("ip") + postData.get("auth_key") +
+                    postData.get("is_from") + postData.get("pltfm") + postData.get("lang") +
+                    postData.get("apbi_id") + SEAT_MAP_POST_SALT;
             String postKeyString = md5(sha512(postKeyInput));
             String postKey = encrypt(authKey, postKeyString);
             postData.put("key", postKey);
@@ -93,14 +105,12 @@ public class BmsLgSeatMapServiceImpl implements BmsLgSeatMapService {
             // Build URL with GET parameters
             StringBuilder urlBuilder = new StringBuilder(BMSLG_SEAT_MAP_URL);
             urlBuilder.append("?");
-            getData.forEach((key, value) ->
-                urlBuilder.append(key).append("=").append(value).append("&"));
+            getData.forEach((key, value) -> urlBuilder.append(key).append("=").append(value).append("&"));
             String url = urlBuilder.toString().replaceAll("&$", "");
 
             // Build POST body
             StringBuilder postBody = new StringBuilder();
-            postData.forEach((key, value) ->
-                postBody.append(key).append("=").append(value).append("&"));
+            postData.forEach((key, value) -> postBody.append(key).append("=").append(value).append("&"));
             String postBodyStr = postBody.toString().replaceAll("&$", "");
 
             log.info("BMSLG Seat Map URL: {}", url);
@@ -109,10 +119,10 @@ public class BmsLgSeatMapServiceImpl implements BmsLgSeatMapService {
             // Send HTTP request
             HttpClient client = HttpClient.newHttpClient();
             HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .header("Content-Type", "application/x-www-form-urlencoded")
-                .POST(HttpRequest.BodyPublishers.ofString(postBodyStr))
-                .build();
+                    .uri(URI.create(url))
+                    .header("Content-Type", "application/x-www-form-urlencoded")
+                    .POST(HttpRequest.BodyPublishers.ofString(postBodyStr))
+                    .build();
 
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
@@ -148,20 +158,20 @@ public class BmsLgSeatMapServiceImpl implements BmsLgSeatMapService {
         for (Map.Entry<String, Map<String, Integer>> entry : numericFields.entrySet()) {
             String field = entry.getKey();
             Map<String, Integer> rules = entry.getValue();
-            
+
             if (!postData.containsKey(field) || !NUMERIC_PATTERN.matcher(postData.get(field)).matches()) {
                 log.error("Field {} is missing or not numeric", field);
                 return false;
             }
-            
+
             int value = Integer.parseInt(postData.get(field));
             if (value < rules.get("min") || (rules.containsKey("max") && value > rules.get("max"))) {
-                log.error("Field {} value {} is out of range (min: {}, max: {})", 
-                         field, value, rules.get("min"), rules.getOrDefault("max", Integer.MAX_VALUE));
+                log.error("Field {} value {} is out of range (min: {}, max: {})",
+                        field, value, rules.get("min"), rules.getOrDefault("max", Integer.MAX_VALUE));
                 return false;
             }
         }
-        
+
         return true;
     }
 
@@ -169,7 +179,7 @@ public class BmsLgSeatMapServiceImpl implements BmsLgSeatMapService {
      * Encrypts a string using the specified algorithm
      *
      * @param algorithmType Algorithm type (1=MD5, 2=SHA1, 3=SHA256, 4=SHA512)
-     * @param input The string to encrypt
+     * @param input         The string to encrypt
      * @return Encrypted string or null if algorithm not supported
      */
     private String encrypt(int algorithmType, String input) {

@@ -30,8 +30,8 @@ public class CacheConfig {
     public CacheManager fallbackCacheManager() {
         ConcurrentMapCacheManager cacheManager = new ConcurrentMapCacheManager();
         
-        // Configure cache names including station cache
-        cacheManager.setCacheNames(java.util.Arrays.asList("partnerCache", "agentCache", "stationCache"));
+        // Configure cache names including station cache and bus search cache
+        cacheManager.setCacheNames(java.util.Arrays.asList("partnerCache", "agentCache", "stationCache", "busSearchCache"));
         
         // Allow dynamic cache creation and null values
         cacheManager.setAllowNullValues(true);
