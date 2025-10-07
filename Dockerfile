@@ -8,6 +8,9 @@ COPY .mvn .mvn
 COPY mvnw .
 COPY mvnw.cmd .
 
+# Fix line endings (Windows CRLF to Unix LF) and make executable
+RUN sed -i 's/\r$//' mvnw && chmod +x mvnw
+
 # Download dependencies (cached layer)
 RUN ./mvnw dependency:go-offline -B
 
