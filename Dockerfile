@@ -4,19 +4,13 @@ WORKDIR /build
 
 # Copy pom.xml first for better caching
 COPY pom.xml .
-COPY .mvn .mvn
-COPY mvnw .
-COPY mvnw.cmd .
 
-# Fix line endings (Windows CRLF to Unix LF) and make executable
-RUN sed -i 's/\r$//' mvnw && chmod +x mvnw
-
-# Download dependencies (cached layer)
-RUN ./mvnw dependency:go-offline -B
+# Download dependencies (cached layer) - use Maven directly
+RUN mvn dependency:go-offline -B
 
 # Copy source and build
 COPY src ./src
-RUN ./mvnw clean package -DskipTests && \
+RUN mvn clean package -DskipTests && \
     mkdir -p target/dependency && \
     cd target/dependency && \
     jar -xf ../*.jar
