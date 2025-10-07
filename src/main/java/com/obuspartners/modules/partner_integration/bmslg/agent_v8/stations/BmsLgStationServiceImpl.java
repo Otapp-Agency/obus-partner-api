@@ -16,7 +16,7 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
-
+import com.obuspartners.modules.partner_integration.bmslg.agent_v8.dto.BmsLgStationRequestDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -45,28 +45,109 @@ public class BmsLgStationServiceImpl implements BmsLgStationService {
     private static final String BMSLG_SEARCH_STATIONS_URL = "https://bms.oacl.co.tz/api/Agents-V8/Search-Stations.php";
     private static final String STATION_SALT = "5t@t!0n$";
 
-    @Override
-    @Cacheable(value = "stationCache", key = "'all_stations'")
-    public Object fetchAllStations() {
-        log.info("Cache miss or expired, fetching fresh station data from BMSLG");
-        try {
-            // Generate random auth key (1-5, but we removed RIPEMD160 support, so 1-4)
-            Random random = new Random();
-            int authKey = random.nextInt(4) + 1; // Random between 1-4
+    // @Override
+    // @Cacheable(value = "stationCache", key = "'all_stations'")
+    // public Object fetchAllStations() {
+    //     log.info("Cache miss or expired, fetching fresh station data from BMSLG");
+    //     try {
+    //         // Generate random auth key (1-5, but we removed RIPEMD160 support, so 1-4)
+    //         Random random = new Random();
+    //         int authKey = random.nextInt(4) + 1; // Random between 1-4
 
-            // Prepare POST data
+    //         // Prepare POST data
+    //         Map<String, String> postData = new HashMap<>();
+    //         postData.put("imei", "123456789012345");
+    //         postData.put("lat", "0.0");
+    //         postData.put("long", "0.0");
+    //         postData.put("ip", "192.168.0.101");
+    //         postData.put("owner_id", "64");
+    //         postData.put("auth_key", String.valueOf(authKey));
+    //         postData.put("key", ""); // Will be calculated
+    //         postData.put("is_from", "4");
+    //         postData.put("pltfm", "0"); // 0=ANDROID AGENT NORMAL, 1=ANDROID AGENT SPECIAL, 2=ANDROID AGENT SHORT, 3=ANDROID AGENT CARGO
+    //         postData.put("lang", "0"); // 0=English, 1=Swahili
+    //         postData.put("app_ver", "4.88");
+
+    //         // Prepare GET data
+    //         Map<String, String> getData = new HashMap<>();
+    //         getData.put("key", ""); // Will be calculated
+
+    //         // Calculate GET key: encrypt(auth_key, owner_id + auth_key + "5t@t!0n$")
+    //         String getKeyInput = postData.get("owner_id") + postData.get("auth_key") + STATION_SALT;
+    //         String getKey = encrypt(authKey, getKeyInput);
+    //         getData.put("key", getKey);
+
+    //         // Calculate POST key: encrypt(auth_key, raw_string)
+    //         String rawString = postData.get("owner_id") + postData.get("is_from") + postData.get("pltfm") +
+    //                           postData.get("lang") + postData.get("imei") + postData.get("lat") +
+    //                           postData.get("long") + postData.get("ip") + postData.get("auth_key") + STATION_SALT;
+    //         String postKey = encrypt(authKey, rawString);
+    //         postData.put("key", postKey);
+
+    //         // Build URL with GET parameters
+    //         StringBuilder urlBuilder = new StringBuilder(BMSLG_SEARCH_STATIONS_URL);
+    //         urlBuilder.append("?");
+    //         getData.forEach((key, value) ->
+    //             urlBuilder.append(key).append("=").append(value).append("&"));
+    //         String url = urlBuilder.toString().replaceAll("&$", "");
+
+    //         // Build POST body
+    //         StringBuilder postBody = new StringBuilder();
+    //         postData.forEach((key, value) ->
+    //             postBody.append(key).append("=").append(value).append("&"));
+    //         String postBodyStr = postBody.toString().replaceAll("&$", "");
+
+    //         log.info("BMSLG Search Stations URL: {}", url);
+    //         log.info("BMSLG Search Stations Payload: {}", postBodyStr);
+
+    //         // Send HTTP request
+    //         HttpClient client = HttpClient.newHttpClient();
+    //         HttpRequest request = HttpRequest.newBuilder()
+    //             .uri(URI.create(url))
+    //             .header("Content-Type", "application/x-www-form-urlencoded")
+    //             .POST(HttpRequest.BodyPublishers.ofString(postBodyStr))
+    //             .build();
+
+    //         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+    //         log.info("BMSLG Search Stations HTTP Code: {}", response.statusCode());
+    //         log.info("BMSLG Search Stations Response: {}", response.body());
+
+    //         return response.body();
+
+    //     } catch (IOException | InterruptedException e) {
+    //         log.error("Error during BMSLG stations fetch", e);
+    //         throw new RuntimeException("Failed to fetch stations: " + e.getMessage(), e);
+    //     }
+    // }
+
+    @Override
+    @Cacheable(value = "stationCache", key = "#requestDto.ownerId + '_' + #requestDto.lang + '_' + #requestDto.isFrom + '_' + #requestDto.pltfm")
+    public Object fetchAllStations(BmsLgStationRequestDto requestDto) {
+        log.info("Cache miss or expired, fetching station data from BMSLG with request parameters");
+        try {
+            // Use auth key from request or generate random one
+            int authKey;
+            if (requestDto.getAuthKey() != null && !requestDto.getAuthKey().isEmpty()) {
+                authKey = Integer.parseInt(requestDto.getAuthKey());
+            } else {
+                Random random = new Random();
+                authKey = random.nextInt(4) + 1; // Random between 1-4
+            }
+
+            // Prepare POST data from request DTO
             Map<String, String> postData = new HashMap<>();
-            postData.put("imei", "123456789012345");
-            postData.put("lat", "0.0");
-            postData.put("long", "0.0");
-            postData.put("ip", "192.168.0.101");
-            postData.put("owner_id", "64");
+            postData.put("imei", requestDto.getImei() != null ? requestDto.getImei() : "");
+            postData.put("lat", requestDto.getLat() != null ? requestDto.getLat() : "0.0");
+            postData.put("long", requestDto.getLongitude() != null ? requestDto.getLongitude() : "0.0");
+            postData.put("ip", requestDto.getIp() != null ? requestDto.getIp() : "192.168.0.101");
+            postData.put("owner_id", requestDto.getOwnerId() != null ? requestDto.getOwnerId() : "64");
             postData.put("auth_key", String.valueOf(authKey));
             postData.put("key", ""); // Will be calculated
-            postData.put("is_from", "4");
-            postData.put("pltfm", "0"); // 0=ANDROID AGENT NORMAL, 1=ANDROID AGENT SPECIAL, 2=ANDROID AGENT SHORT, 3=ANDROID AGENT CARGO
-            postData.put("lang", "0"); // 0=English, 1=Swahili
-            postData.put("app_ver", "4.88");
+            postData.put("is_from", requestDto.getIsFrom() != null ? requestDto.getIsFrom() : "4");
+            postData.put("pltfm", requestDto.getPltfm() != null ? requestDto.getPltfm() : "0");
+            postData.put("lang", requestDto.getLang() != null ? requestDto.getLang() : "1");
+            postData.put("app_ver", requestDto.getAppVer() != null ? requestDto.getAppVer() : "5.00");
 
             // Prepare GET data
             Map<String, String> getData = new HashMap<>();

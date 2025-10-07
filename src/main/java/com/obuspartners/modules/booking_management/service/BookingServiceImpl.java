@@ -1,7 +1,6 @@
 package com.obuspartners.modules.booking_management.service;
 
 import com.obuspartners.modules.agent_management.domain.entity.Agent;
-import com.obuspartners.modules.agent_management.domain.entity.GroupAgent;
 import com.obuspartners.modules.agent_management.domain.entity.GroupAgentCoreBusSystem;
 import com.obuspartners.modules.agent_management.repository.AgentRepository;
 import com.obuspartners.modules.agent_management.repository.GroupAgentCoreBusSystemRepository;

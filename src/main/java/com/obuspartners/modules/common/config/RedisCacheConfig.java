@@ -58,6 +58,10 @@ public class RedisCacheConfig {
         RedisCacheConfiguration stationCacheConfig = defaultConfig
             .entryTtl(Duration.ofSeconds(3600));
 
+        // Bus search cache with 5-minute TTL
+        RedisCacheConfiguration busSearchCacheConfig = defaultConfig
+            .entryTtl(Duration.ofMinutes(5));
+
         // Partner cache with 10-minute TTL
         RedisCacheConfiguration partnerCacheConfig = defaultConfig
             .entryTtl(Duration.ofMinutes(10));
@@ -69,6 +73,7 @@ public class RedisCacheConfig {
         return RedisCacheManager.builder(connectionFactory)
             .cacheDefaults(defaultConfig)
             .withCacheConfiguration("stationCache", stationCacheConfig)
+            .withCacheConfiguration("busSearchCache", busSearchCacheConfig)
             .withCacheConfiguration("partnerCache", partnerCacheConfig)
             .withCacheConfiguration("agentCache", agentCacheConfig)
             .build();

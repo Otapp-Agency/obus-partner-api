@@ -30,7 +30,6 @@ public class BookingEventConsumer {
 
     private final BookingService bookingService;
     private final BookingRepository bookingRepository;
-    private final BmsLgBookSeatService bmsLgBookSeatService;
     private final EventProducerService eventProducerService;
 
     /**

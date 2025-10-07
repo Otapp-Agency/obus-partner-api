@@ -10,6 +10,9 @@ import com.obuspartners.modules.partner_integration.bmslg.agent_v8.seat.BmsLgSea
 import com.obuspartners.modules.partner_integration.bmslg.agent_v8.booking.BmsLgBookSeatService;
 import com.obuspartners.modules.partner_integration.bmslg.agent_v8.dto.BmsLgBookSeatRequestDto;
 import com.obuspartners.modules.partner_integration.bmslg.agent_v8.dto.BmsLgProcessSeatRequestDto;
+import com.obuspartners.modules.partner_integration.bmslg.agent_v8.dto.BmsLgStationRequestDto;
+import com.obuspartners.modules.partner_integration.bmslg.agent_v8.dto.BmsLgSeatMapRequestDto;
+import com.obuspartners.modules.partner_integration.bmslg.agent_v8.dto.BmsLgSearchBusRequestDto;
 import com.obuspartners.modules.agent_management.service.AgentAuthenticationService;
 import com.obuspartners.modules.agent_management.service.AgentBusCoreSystemService;
 import com.obuspartners.modules.partner_management.service.PartnerService;
@@ -222,10 +225,10 @@ public class PartnerAgentApiController {
      * @return ResponseEntity with stations data
      */
     @Operation(summary = "Fetch All Stations", description = "Fetch all stations from BMSLG system - requires both partner API key authentication and agent JWT authentication")
-    @GetMapping("/stations")
-    public ResponseEntity<Object> fetchAllStations(HttpServletRequest request) {
+    @PostMapping("/stations")
+    public ResponseEntity<Object> fetchAllStations(@RequestBody BmsLgStationRequestDto requestDto, HttpServletRequest request) {
         log.info("Fetch all stations endpoint called for Partner Agent API");
-        Object stationsData = bmsLgStationService.fetchAllStations();
+        Object stationsData = bmsLgStationService.fetchAllStations(requestDto);
         return ResponseEntity.ok(stationsData);
     }
 
@@ -250,10 +253,10 @@ public class PartnerAgentApiController {
      * @return ResponseEntity with buses search data
      */
     @Operation(summary = "Search Buses", description = "Search buses from BMSLG system - requires both partner API key authentication and agent JWT authentication")
-    @GetMapping("/buses/search")
-    public ResponseEntity<Object> searchBuses(HttpServletRequest request) {
+    @PostMapping("/buses/search")
+    public ResponseEntity<Object> searchBuses(@RequestBody BmsLgSearchBusRequestDto requestDto, HttpServletRequest request) {
         log.info("Search buses endpoint called for Partner Agent API");
-        Object busesData = bmsLgBusService.searchBuses();
+        Object busesData = bmsLgBusService.searchBuses(requestDto);
         return ResponseEntity.ok(busesData);
     }
 
@@ -264,10 +267,10 @@ public class PartnerAgentApiController {
      * @return ResponseEntity with seat map data
      */
     @Operation(summary = "Get Seat Map", description = "Get seat map from BMSLG system - requires both partner API key authentication and agent JWT authentication")
-    @GetMapping("/seat-map")
-    public ResponseEntity<Object> getSeatMap(HttpServletRequest request) {
+    @PostMapping("/seat-map")
+    public ResponseEntity<Object> getSeatMap(@RequestBody BmsLgSeatMapRequestDto requestDto, HttpServletRequest request) {
         log.info("Get seat map endpoint called for Partner Agent API");
-        Object seatMapData = bmsLgSeatMapService.getSeatMap();
+        Object seatMapData = bmsLgSeatMapService.getSeatMap(requestDto);
         return ResponseEntity.ok(seatMapData);
     }
 
