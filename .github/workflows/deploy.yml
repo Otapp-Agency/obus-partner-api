@@ -63,7 +63,7 @@ jobs:
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging'
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging' || github.ref == 'refs/heads/deploy'
     
     steps:
       - name: Set environment based on branch
@@ -72,6 +72,8 @@ jobs:
             echo "DEPLOY_ENV=prod" >> $GITHUB_ENV
           elif [[ "${{ github.ref }}" == "refs/heads/staging" ]]; then
             echo "DEPLOY_ENV=staging" >> $GITHUB_ENV
+          elif [[ "${{ github.ref }}" == "refs/heads/deploy" ]]; then
+            echo "DEPLOY_ENV=prod" >> $GITHUB_ENV
           fi
 
       - name: Deploy to Server
