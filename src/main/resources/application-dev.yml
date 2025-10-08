@@ -1,0 +1,76 @@
+# Development Profile Configuration
+# This profile is optimized for development with hot reload
+
+spring:
+  devtools:
+    restart:
+      enabled: true
+      additional-paths: src/main/java
+      exclude: static/**,public/**,resources/**,target/**
+      poll-interval: 1000
+      quiet-period: 400
+    livereload:
+      enabled: true
+      port: 35729
+    remote:
+      restart:
+        enabled: false
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        show_sql: true
+        use_sql_comments: true
+  # Mail Configuration
+  mail:
+    host: smtp-relay.brevo.com
+    port: 587
+    username: 8af8b0001@smtp-brevo.com
+    password: xsmtpsib-2ca2d952e4d6ec5bdf4f184270c3b9ae8cb36ec847bfd3508e60ce47e9f31bde-OymjT4cSX0fIFJMs
+    from: no-reply@otapp.live
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+  # Kafka Development Configuration
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: obus-partner-api-dev-group
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+    producer:
+      acks: 1  # Faster for development
+      retries: 1
+      batch-size: 1024
+      linger-ms: 1
+    listener:
+      ack-mode: manual_immediate
+      concurrency: 1  # Single thread for development
+      missing-topics-fatal: false
+    admin:
+      auto-create: true
+
+# Server Configuration for Development
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+# Logging Configuration for Development
+logging:
+  level:
+    com.obus.partner: DEBUG
+    com.obuspartners.modules.common.security.AgentJwtRequestFilter: DEBUG
+    org.springframework.web: DEBUG
+    org.springframework.boot.devtools: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.apache.kafka: INFO
+    org.springframework.kafka: DEBUG
+
+

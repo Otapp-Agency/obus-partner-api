@@ -1,0 +1,57 @@
+# Production Profile Configuration
+# This profile is optimized for production with high availability and performance
+
+spring:
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:prod-kafka-cluster:9092}
+    consumer:
+      group-id: obus-partner-api-prod-group
+      auto-offset-reset: latest
+      enable-auto-commit: false
+      session-timeout-ms: 30000
+      heartbeat-interval-ms: 10000
+      max-poll-records: 500
+      max-poll-interval-ms: 300000
+      properties:
+        security.protocol: ${KAFKA_SECURITY_PROTOCOL:PLAINTEXT}
+        sasl.mechanism: ${KAFKA_SASL_MECHANISM:PLAIN}
+        sasl.jaas.config: ${KAFKA_SASL_JAAS_CONFIG:}
+    producer:
+      acks: all
+      retries: 3
+      batch-size: 32768
+      linger-ms: 10
+      buffer-memory: 67108864
+      enable-idempotence: true
+      max-in-flight-requests-per-connection: 1
+      properties:
+        security.protocol: ${KAFKA_SECURITY_PROTOCOL:PLAINTEXT}
+        sasl.mechanism: ${KAFKA_SASL_MECHANISM:PLAIN}
+        sasl.jaas.config: ${KAFKA_SASL_JAAS_CONFIG:}
+    listener:
+      ack-mode: manual_immediate
+      concurrency: 5
+      missing-topics-fatal: true
+    admin:
+      auto-create: false  # Disable in production for security
+
+# Logging Configuration for Production
+logging:
+  level:
+    com.obus.partner: WARN
+    org.springframework.web: WARN
+    org.apache.kafka: ERROR
+    org.springframework.kafka: WARN
+    org.hibernate.SQL: ERROR
+    root: WARN
+
+# Production-specific configurations
+kafka:
+  topics:
+    retention-ms: 2592000000  # 30 days
+    partitions: 5
+    replicas: 3
+  monitoring:
+    enabled: true
+    metrics:
+      enabled: true
