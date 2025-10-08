@@ -72,14 +72,19 @@ jobs:
           script: |
             cd ~/obus-partners.otapp.live
             
-            # Set profile based on branch
+            # Set profile and compose file based on branch
             if [ "${{ github.ref }}" = "refs/heads/main" ]; then
               PROFILE=prod
+              COMPOSE_FILE=docker-compose.prod.yml
             elif [ "${{ github.ref }}" = "refs/heads/staging" ]; then
               PROFILE=staging
+              COMPOSE_FILE=docker-compose.staging.yml
             else
               PROFILE=staging
+              COMPOSE_FILE=docker-compose.staging.yml
             fi
+            
+            echo "Using compose file: $COMPOSE_FILE"
             
             # Set GHCR credentials for private repo
             export GITHUB_REPOSITORY=${{ github.repository }}
@@ -87,12 +92,12 @@ jobs:
             # Login to GHCR
             echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             
-            # Pull and deploy
-            PROFILE=$PROFILE docker compose pull
-            docker compose down
-            PROFILE=$PROFILE docker compose up -d
+            # Pull and deploy with correct compose file
+            docker compose -f $COMPOSE_FILE pull
+            docker compose -f $COMPOSE_FILE down
+            docker compose -f $COMPOSE_FILE up -d
             
             # Wait and check health
             sleep 15
-            docker compose ps
-            docker compose logs --tail=50 app
+            docker compose -f $COMPOSE_FILE ps
+            docker compose -f $COMPOSE_FILE logs --tail=50 app
