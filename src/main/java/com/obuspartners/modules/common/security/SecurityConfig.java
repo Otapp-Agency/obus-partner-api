@@ -62,6 +62,7 @@ public class SecurityConfig {
                 // Documentation and monitoring endpoints (with and without /api prefix)
                 .requestMatchers("/swagger-ui/**", "/api/swagger-ui/**", "/swagger-ui.html", "/api/swagger-ui.html").permitAll()
                 .requestMatchers("/v3/api-docs/**", "/api/v3/api-docs/**").permitAll()
+                .requestMatchers("/api-docs/**", "/api/api-docs/**").permitAll()
                 .requestMatchers("/actuator/**", "/api/actuator/**").permitAll()
                 // Agent endpoints
                 .requestMatchers("/partner/v1/agents/register-self", "/api/partner/v1/agents/register-self").permitAll() // Allow agent self-registration with API key validation only
