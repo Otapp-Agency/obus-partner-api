@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   app:
-    image: ghcr.io/${GITHUB_REPOSITORY:-your-org/obus-partner-api}:latest
+    image: ghcr.io/${GITHUB_REPOSITORY:-obuspartners/obus-partner-api}:latest
     container_name: obus-partner-api
     restart: unless-stopped
     ports:

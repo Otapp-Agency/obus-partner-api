@@ -194,3 +194,12 @@ config/application-*.yml
 config/application-*.properties
 !config/application.yml
 !config/application.properties
+
+# Deployment credentials and secrets
+*-credentials.txt
+obus-partners-credentials.txt
+secrets.txt
+.env.staging
+.env.prod
+.env.*
+!.env.example
