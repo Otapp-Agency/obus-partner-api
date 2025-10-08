@@ -1,0 +1,162 @@
+# Application Configuration
+spring:
+  application:
+    name: obus-partner-api
+  
+  # Disable Redis Repositories - we use Redis for caching only, not as a data store
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/obus_partner_db_test?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC}
+    driver-class-name: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:com.mysql.cj.jdbc.Driver}
+    username: ${SPRING_DATASOURCE_USERNAME:root}
+    password: ${SPRING_DATASOURCE_PASSWORD:} 
+  jpa:
+    database-platform: org.hibernate.dialect.MySQLDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+  web:
+    cors:
+      allowed-origins: "*"
+      allowed-methods: GET,POST,PUT,DELETE,OPTIONS
+      allowed-headers: "*"
+  devtools:
+    restart:
+      enabled: true
+      additional-paths: src/main/java
+      exclude: static/**,public/**,resources/**
+    livereload:
+      enabled: true
+      port: 35729
+    remote:
+      restart:
+        enabled: false
+  # Mail Configuration
+  mail:
+    host: ${SPRING_MAIL_HOST:smtp-relay.brevo.com}
+    port: ${SPRING_MAIL_PORT:587}
+    username: ${SPRING_MAIL_USERNAME}
+    password: ${SPRING_MAIL_PASSWORD}
+    from: ${SPRING_MAIL_FROM:no-reply@otapp.live}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+  # Kafka Configuration
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: obus-partner-api-group
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+        spring.json.trusted.packages: "com.obuspartners.modules.*"
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      retries: 3
+      batch-size: 16384
+      linger-ms: 5
+      buffer-memory: 33554432
+      enable-idempotence: true
+      max-in-flight-requests-per-connection: 1
+    listener:
+      ack-mode: manual_immediate
+      concurrency: 3
+      missing-topics-fatal: false
+    admin:
+      auto-create: true
+
+  # Redis Configuration
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:} # Set password if Redis is password protected
+      database: ${REDIS_DATABASE:0}
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+          max-wait: -1ms
+
+# Server Configuration
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    context-path: ${SERVER_CONTEXT_PATH:/api}
+
+# Management/Actuator Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+
+# Logging Configuration
+logging:
+  level:
+    com.obus.partner: DEBUG
+    org.springframework.web: DEBUG
+
+# API Documentation
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    operations-sorter: method
+    tags-sorter: alpha
+    display-request-duration: true
+    show-extensions: true
+    show-common-extensions: true
+
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET}
+  expiration: ${JWT_EXPIRATION:36000} # 10 hours in seconds
+  refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800} # 7 days in seconds
+
+# Root Admin Configuration
+root-admin:
+  username: ${ROOT_ADMIN_USERNAME:rootadmin}
+  password: ${ROOT_ADMIN_PASSWORD}
+  email: ${ROOT_ADMIN_EMAIL:rootadmin@obus.com}
+  displayName: ${ROOT_ADMIN_DISPLAY_NAME:Root Administrator}
+  firstName: ${ROOT_ADMIN_FIRST_NAME:Root}
+  lastName: ${ROOT_ADMIN_LAST_NAME:Administrator}
+
+# Encryption Configuration
+app:
+  encryption:
+    # Primary encryption key (REQUIRED) - Must be exactly 32 characters for AES-256
+    # For production, use environment variables: ${ENCRYPTION_PRIMARY_KEY}
+    primary-key: ${ENCRYPTION_PRIMARY_KEY:obus-partner-api-2025-secure-key-32-byte}
+    
+    # Secondary encryption key (OPTIONAL) - Used for key rotation
+    # For production, use environment variables: ${ENCRYPTION_SECONDARY_KEY}
+    secondary-key: ${ENCRYPTION_SECONDARY_KEY:}
+    
+    # Key rotation settings
+    key-rotation:
+      enabled: ${ENCRYPTION_KEY_ROTATION_ENABLED:false}
+      batch-size: ${ENCRYPTION_KEY_ROTATION_BATCH_SIZE:100}
+

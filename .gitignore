@@ -107,13 +107,12 @@ $RECYCLE.BIN/
 *.swo
 *~
 
-# Application specific
-application.yml
+# Application specific - only ignore local overrides with actual secrets
 application-local.yml
-application-dev.yml
-application-prod.yml
-application-*.properties
-!application.properties
+application-local.properties
+
+# Note: application.yml, application-{profile}.yml should be tracked
+# They contain placeholders like ${SPRING_DATASOURCE_URL}, not actual secrets
 
 # Database
 *.db
