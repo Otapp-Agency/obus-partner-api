@@ -9,7 +9,7 @@ services:
       - "8080:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=${PROFILE:-prod}
-      - JAVA_OPTS=-XX:+UseZGC -XX:+ZGenerational -XX:MaxRAMPercentage=75.0 -XX:InitialRAMPercentage=50.0
+      - JAVA_OPTS=-XX:+UseZGC -XX:+ZGenerational -XX:MaxRAMPercentage=60.0 -XX:InitialRAMPercentage=40.0 -XX:MetaspaceSize=256m -XX:MaxMetaspaceSize=512m
     env_file:
       - .env.${PROFILE:-prod}
     volumes:

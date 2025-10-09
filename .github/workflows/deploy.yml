@@ -72,17 +72,17 @@ jobs:
           script: |
             cd ~/obus-partners.otapp.live
             
-            # Set profile and compose file based on branch
+            # Set profile based on branch
             if [ "${{ github.ref }}" = "refs/heads/main" ]; then
               PROFILE=prod
-              COMPOSE_FILE=docker-compose.prod.yml
             elif [ "${{ github.ref }}" = "refs/heads/staging" ]; then
               PROFILE=staging
-              COMPOSE_FILE=docker-compose.staging.yml
             else
               PROFILE=staging
-              COMPOSE_FILE=docker-compose.staging.yml
             fi
+            
+            export PROFILE=$PROFILE
+            COMPOSE_FILE=docker-compose.yml
             
             echo "Using compose file: $COMPOSE_FILE"
             

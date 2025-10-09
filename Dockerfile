@@ -44,8 +44,10 @@ ENV JAVA_OPTS="\
     -XX:+UseZGC \
     -XX:+ZGenerational \
     -XX:+UseContainerSupport \
-    -XX:MaxRAMPercentage=75.0 \
-    -XX:InitialRAMPercentage=50.0 \
+    -XX:MaxRAMPercentage=60.0 \
+    -XX:InitialRAMPercentage=40.0 \
+    -XX:MetaspaceSize=256m \
+    -XX:MaxMetaspaceSize=512m \
     -XX:+OptimizeStringConcat \
     -XX:+UseStringDeduplication"
 
