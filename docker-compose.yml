@@ -9,7 +9,7 @@ services:
       - "8080:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=${PROFILE:-prod}
-      - JAVA_OPTS=-XX:+UseZGC -XX:+ZGenerational -XX:MaxRAMPercentage=60.0 -XX:InitialRAMPercentage=40.0 -XX:MetaspaceSize=256m -XX:MaxMetaspaceSize=512m
+      - JAVA_OPTS=-XX:+UseZGC -XX:+ZGenerational -XX:MaxRAMPercentage=50.0 -XX:InitialRAMPercentage=30.0 -XX:MetaspaceSize=192m -XX:MaxMetaspaceSize=384m
     env_file:
       - .env.${PROFILE:-prod}
     volumes:
@@ -28,9 +28,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 2G
+          memory: 3G
         reservations:
-          memory: 1G
+          memory: 1.5G
 
   redis:
     image: redis:7-alpine
