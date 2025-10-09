@@ -202,3 +202,4 @@ secrets.txt
 .env.prod
 .env.*
 !.env.example
+env.example.txt
