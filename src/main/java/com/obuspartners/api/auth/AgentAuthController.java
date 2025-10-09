@@ -26,7 +26,7 @@ import com.obuspartners.modules.common.util.ResponseWrapper;
 @RestController
 @RequestMapping("/v1/auth/agent")
 @RequiredArgsConstructor
-@Tag(name = "Agent Authentication", description = "Agent authentication operations")
+@Tag(name = "Auth", description = "Authentication APIs - Login, Register, Refresh Token, Agent Auth")
 public class AgentAuthController {
 
     private final AgentAuthenticationService agentAuthenticationService;

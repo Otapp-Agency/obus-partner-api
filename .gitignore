@@ -110,6 +110,8 @@ $RECYCLE.BIN/
 # Application specific - only ignore local overrides with actual secrets
 application-local.yml
 application-local.properties
+src/main/resources/application-local.yml
+src/main/resources/application-local.properties
 
 # Note: application.yml, application-{profile}.yml should be tracked
 # They contain placeholders like ${SPRING_DATASOURCE_URL}, not actual secrets

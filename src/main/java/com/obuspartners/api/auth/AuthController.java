@@ -1,5 +1,6 @@
 package com.obuspartners.api.auth;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -30,6 +31,7 @@ import com.obuspartners.modules.user_and_role_management.service.UserService;
 @RestController
 @RequestMapping("/v1/auth")
 @CrossOrigin(origins = "*")
+@Tag(name = "Auth", description = "Authentication APIs - Login, Register, Refresh Token")
 public class AuthController {
 
     @Autowired

@@ -1,5 +1,6 @@
 package com.obuspartners.api.publicapi;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.obuspartners.modules.partner_integration.mixx.entity.MixxPaymentCallback;
 import com.obuspartners.modules.partner_integration.mixx.repository.MixxPaymentCallbackRepository;
@@ -27,6 +28,7 @@ import java.math.BigDecimal;
 @RestController
 @RequestMapping("/public/mixx/v1")
 @RequiredArgsConstructor
+@Tag(name = "Public", description = "Public APIs - Payment callbacks, webhooks (no authentication required)")
 public class MixxPublicController {
 
     private final MixxPaymentCallbackRepository mixxPaymentCallbackRepository;

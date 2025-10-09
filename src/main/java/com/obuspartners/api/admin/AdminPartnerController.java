@@ -1,5 +1,6 @@
 package com.obuspartners.api.admin;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -30,6 +31,7 @@ import java.util.List;
 @RequestMapping("/admin/v1/partners")
 @CrossOrigin(origins = "*")
 @RequiredArgsConstructor
+@Tag(name = "Admin", description = "Admin APIs - Manage Partners, Users, Agents, Bus Systems")
 public class AdminPartnerController {
 
     private final PartnerService partnerService;

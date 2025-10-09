@@ -42,7 +42,7 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/partner/v1/agent-api")
 @RequiredArgsConstructor
-@Tag(name = "Partner Agent API", description = "Agent API operations for partners")
+@Tag(name = "Partner", description = "Partner APIs - Bus integration operations (stations, buses, bookings)")
 public class PartnerAgentApiController {
 
     private final AgentAuthenticationService agentAuthenticationService;

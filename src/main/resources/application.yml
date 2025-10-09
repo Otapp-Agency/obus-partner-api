@@ -149,7 +149,7 @@ app:
   encryption:
     # Primary encryption key (REQUIRED) - Must be exactly 32 characters for AES-256
     # For production, use environment variables: ${ENCRYPTION_PRIMARY_KEY}
-    primary-key: ${ENCRYPTION_PRIMARY_KEY:obus-partner-api-2025-secure-key-32-byte}
+    primary-key: ${ENCRYPTION_PRIMARY_KEY}
     
     # Secondary encryption key (OPTIONAL) - Used for key rotation
     # For production, use environment variables: ${ENCRYPTION_SECONDARY_KEY}
